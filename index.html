@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CivicTrack AI - Public Issue Reporting & Accountability Platform</title>
+  <meta name="description" content="Report the Problem. Track the Action. Verify the Solution. Citizen-focused civic accountability platform with AI verification and citizen verification.">
+
+  <!-- Leaflet CSS for Civic Map (Zero API Key required) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <!-- Custom CSS Design System -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/forms.css">
+  <link rel="stylesheet" href="css/map.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Top App Navigation Header -->
+  <header class="app-header">
+    <a href="#dashboard" class="brand-container" id="brand-logo-link">
+      <div class="brand-logo-badge">🏛️</div>
+      <div class="brand-text">
+        <div class="brand-title">
+          <span>CivicTrack</span>
+          <span class="ai-pill">AI</span>
+        </div>
+        <span class="brand-subtitle" data-i18n="app_tagline">Report the Problem. Track the Action. Verify the Solution.</span>
+      </div>
+    </a>
+
+    <div class="header-actions">
+      <!-- Quick Language Switcher -->
+      <div style="display: flex; gap: 0.25rem; background: var(--bg-tertiary); padding: 0.25rem; border-radius: var(--radius-full); border: 1px solid var(--border-color);">
+        <button class="lang-toggle-btn active" data-lang="en" onclick="I18nService.setLanguage('en')" style="padding: 0.25rem 0.55rem; font-size: 0.75rem; font-weight: 700; border-radius: var(--radius-full);">EN</button>
+        <button class="lang-toggle-btn" data-lang="ta" onclick="I18nService.setLanguage('ta')" style="padding: 0.25rem 0.55rem; font-size: 0.75rem; font-weight: 700; border-radius: var(--radius-full);">தமிழ்</button>
+      </div>
+
+      <!-- Theme Switcher (Dark/Light) -->
+      <button class="btn-icon theme-toggle-btn" title="Toggle Theme" aria-label="Toggle Theme">
+        <span class="theme-icon">🌙</span>
+      </button>
+
+      <!-- Notifications Bell Icon -->
+      <button class="btn-icon" onclick="AppRouter.navigate('notifications')" title="Notifications" aria-label="Notifications" style="position: relative;">
+        🔔
+        <span class="nav-badge danger notif-badge-count" style="position: absolute; top: -4px; right: -4px; padding: 0.1rem 0.4rem; display: none;">0</span>
+      </button>
+
+      <!-- Primary CTA in Header (Desktop) -->
+      <button class="btn btn-primary" onclick="AppRouter.navigate('report')" id="header-report-btn" style="display: none;">
+        + Report Issue
+      </button>
+    </div>
+  </header>
+
+  <!-- App Main Container -->
+  <div id="app-container">
+    
+    <!-- Sidebar Navigation (Desktop) -->
+    <aside class="app-sidebar" id="app-sidebar">
+      <div class="sidebar-nav-group">
+        <div class="sidebar-group-title">CITIZEN PORTAL</div>
+        <a href="#dashboard" class="nav-link active" data-route="dashboard">
+          <span class="nav-icon">📊</span>
+          <span data-i18n="nav_dashboard">Dashboard</span>
+        </a>
+        <a href="#report" class="nav-link" data-route="report">
+          <span class="nav-icon">📸</span>
+          <span data-i18n="nav_report">Report Issue</span>
+        </a>
+        <a href="#complaints" class="nav-link" data-route="complaints">
+          <span class="nav-icon">📂</span>
+          <span data-i18n="nav_complaints">My Complaints</span>
+        </a>
+        <a href="#map" class="nav-link" data-route="map">
+          <span class="nav-icon">📍</span>
+          <span data-i18n="nav_map">Civic Map</span>
+        </a>
+
+        <div class="sidebar-group-title" style="margin-top: 0.75rem;">TRANSPARENCY & AI</div>
+        <a href="#public-dashboard" class="nav-link" data-route="public-dashboard">
+          <span class="nav-icon">📈</span>
+          <span data-i18n="nav_public">Public Dashboard</span>
+        </a>
+        <a href="#insights" class="nav-link" data-route="insights">
+          <span class="nav-icon">✨</span>
+          <span data-i18n="nav_insights">AI Insights</span>
+          <span class="nav-badge" style="background: var(--accent-ai-light); color: var(--accent-ai);">AI</span>
+        </a>
+        <a href="#notifications" class="nav-link" data-route="notifications">
+          <span class="nav-icon">🔔</span>
+          <span data-i18n="nav_notifications">Notifications</span>
+          <span class="nav-badge notif-badge-count" style="display: none;">0</span>
+        </a>
+        <a href="#profile" class="nav-link" data-route="profile">
+          <span class="nav-icon">⚙️</span>
+          <span data-i18n="nav_profile">Profile & Settings</span>
+        </a>
+      </div>
+
+      <!-- Sidebar Footer Hackathon Note -->
+      <div>
+        <div class="sidebar-cta-box">
+          <span class="prototype-disclaimer-pill" style="margin-bottom: 0.5rem;">AI Prototype Platform</span>
+          <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">
+            "Complaint poda mattum illa — resolution varaikkum track pannura system."
+          </p>
+          <button class="btn btn-sm btn-secondary" onclick="StorageService.resetDemoData(); location.reload();" style="width: 100%;">
+            🔄 Reset Demo Data
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Dynamic Content Views -->
+    <main class="app-main" id="app-main-content">
+
+      <!-- ====================================================================
+           VIEW 1: DASHBOARD
+           ==================================================================== -->
+      <section id="view-dashboard" class="spa-view active">
+        <!-- Hero Banner -->
+        <div class="civic-hero-banner">
+          <div class="hero-content">
+            <span class="hero-tagline-tamil">"Complaint poda mattum illa — resolution varaikkum track pannura system"</span>
+            <h1 class="hero-title" data-i18n="hero_headline">Your City. Your Voice. Your Impact.</h1>
+            <p class="hero-subtitle" data-i18n="hero_subheadline">
+              Report civic problems, watch AI vision analyze severity, track ward officer action in real-time, and verify resolution on-ground.
+            </p>
+            <div class="hero-actions">
+              <button class="btn btn-lg" onclick="AppRouter.navigate('report')" style="background: #ffffff; color: var(--brand-primary); font-weight: 800; box-shadow: 0 4px 14px rgba(0,0,0,0.2);">
+                📸 + Report a Problem
+              </button>
+              <button class="btn btn-lg" onclick="AppRouter.navigate('map')" style="background: rgba(255,255,255,0.2); color: #ffffff; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.4);">
+                📍 Explore Civic Map
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Verification Alert Banner (Shows when resolved complaint needs citizen verification) -->
+        <div id="home-verification-alert" class="verification-alert-banner" style="display: none;">
+          <div class="verification-alert-content">
+            <div class="verification-alert-icon">🛡️</div>
+            <div>
+              <h4 style="font-weight: 800; color: var(--text-primary);" data-i18n="verify_heading">Has this problem actually been fixed?</h4>
+              <p id="home-verify-complaint-title" style="font-size: 0.85rem; color: var(--text-secondary);"></p>
+            </div>
+          </div>
+          <button id="home-verify-action-btn" class="btn btn-primary btn-sm">
+            Verify Resolution Now &rarr;
+          </button>
+        </div>
+
+        <!-- Metric KPI Cards -->
+        <div class="stats-grid">
+          <div class="stat-card total">
+            <div class="stat-header">
+              <span class="stat-label" data-i18n="stat_total_reports">TOTAL REPORTS</span>
+              <div class="stat-icon" style="color: #0284c7;">📊</div>
+            </div>
+            <div class="stat-value" id="stat-total-reports">1,284</div>
+            <div class="stat-subtext"><span class="trend-up">↑ 12%</span> this month across Chennai</div>
+          </div>
+
+          <div class="stat-card resolved">
+            <div class="stat-header">
+              <span class="stat-label" data-i18n="stat_resolved">RESOLVED</span>
+              <div class="stat-icon" style="color: #10b981;">✅</div>
+            </div>
+            <div class="stat-value" id="stat-resolved">947</div>
+            <div class="stat-subtext"><span class="trend-up">73.7%</span> resolution compliance rate</div>
+          </div>
+
+          <div class="stat-card pending">
+            <div class="stat-header">
+              <span class="stat-label" data-i18n="stat_pending">PENDING</span>
+              <div class="stat-icon" style="color: #f59e0b;">⏳</div>
+            </div>
+            <div class="stat-value" id="stat-pending">337</div>
+            <div class="stat-subtext">Active in repair & assignment queue</div>
+          </div>
+
+          <div class="stat-card critical">
+            <div class="stat-header">
+              <span class="stat-label" data-i18n="stat_high_priority">HIGH PRIORITY</span>
+              <div class="stat-icon" style="color: #ef4444;">🚨</div>
+            </div>
+            <div class="stat-value" id="stat-critical">75</div>
+            <div class="stat-subtext"><span class="trend-alert">Urgent SLA</span> 24h action required</div>
+          </div>
+        </div>
+
+        <!-- Quick Action Cards Grid -->
+        <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">Quick Actions</h3>
+        <div class="quick-actions-grid">
+          <div class="quick-action-card" onclick="AppRouter.navigate('report')">
+            <div class="quick-action-icon">📸</div>
+            <div class="quick-action-info">
+              <h4 data-i18n="nav_report">Report Issue</h4>
+              <p>Upload photo with AI scanner</p>
+            </div>
+          </div>
+
+          <div class="quick-action-card" onclick="AppRouter.navigate('map')">
+            <div class="quick-action-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">📍</div>
+            <div class="quick-action-info">
+              <h4 data-i18n="nav_map">View Civic Map</h4>
+              <p>Interactive city problem map</p>
+            </div>
+          </div>
+
+          <div class="quick-action-card" onclick="AppRouter.navigate('public-dashboard')">
+            <div class="quick-action-icon" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;">📈</div>
+            <div class="quick-action-info">
+              <h4 data-i18n="nav_public">Public Dashboard</h4>
+              <p>Resolution transparency stats</p>
+            </div>
+          </div>
+
+          <div class="quick-action-card" onclick="AppRouter.navigate('notifications')">
+            <div class="quick-action-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">🔔</div>
+            <div class="quick-action-info">
+              <h4 data-i18n="nav_notifications">Notifications</h4>
+              <p>Real-time status updates</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Two Column Dashboard Layout -->
+        <div class="dashboard-layout-2col">
+          <!-- Recent Activity Feed -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>⚡ Recent City Activity</span>
+              </div>
+              <button class="btn btn-sm btn-secondary" onclick="AppRouter.navigate('complaints')">View All</button>
+            </div>
+            <div id="recent-activity-stream" class="activity-stream">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- AI Intelligence Spotlight Card -->
+          <div class="card" style="border-left: 4px solid var(--accent-ai);">
+            <div class="card-header">
+              <div class="card-title">
+                <span>✨ AI Hotspot Spotlight</span>
+              </div>
+              <span class="prototype-disclaimer-pill">Prototype AI</span>
+            </div>
+            <div style="margin-bottom: 1rem;">
+              <span class="insight-type-tag">🚨 Hotspot Alert</span>
+              <h4 style="font-size: 1.05rem; margin-bottom: 0.4rem;">Central Junction (EVR Periyar Salai)</h4>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1rem;">
+                AI pattern analysis detected 14 recurrent complaints in the past 30 days. High concentration of Traffic Signal and Road Surface failures.
+              </p>
+              <div style="background: var(--bg-tertiary); padding: 0.75rem; border-radius: var(--radius-md); font-size: 0.8rem; margin-bottom: 1rem;">
+                <strong>Recommendation:</strong> Schedule preventive inspection before evening rush hour.
+              </div>
+              <button class="btn btn-sm btn-ai" onclick="AppRouter.navigate('insights')" style="width: 100%;">
+                Explore All AI Insights &rarr;
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           VIEW 2: REPORT ISSUE
+           ==================================================================== -->
+      <section id="view-report" class="spa-view">
+        <div class="report-form-container">
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <div>
+              <h2 style="font-size: 1.8rem; font-weight: 800;">Report a Civic Problem</h2>
+              <p style="color: var(--text-secondary);">Submit with photo proof, GPS location and AI automated severity classification.</p>
+            </div>
+            <span class="prototype-disclaimer-pill">AI Prototype Analysis</span>
+          </div>
+
+          <form id="civic-report-form">
+            <!-- Step 1: Category Selection -->
+            <div class="form-step-card">
+              <label class="form-label">1. Select Problem Category</label>
+              <div class="category-chips-grid">
+                <label class="category-chip-label selected" data-category="pothole" data-name="Pothole" data-icon="🕳️">
+                  <input type="radio" name="category" value="pothole" checked>
+                  <div class="chip-icon">🕳️</div>
+                  <div class="chip-name" data-i18n="cat_pothole">Pothole</div>
+                </label>
+
+                <label class="category-chip-label" data-category="streetlight" data-name="Broken Streetlight" data-icon="💡">
+                  <input type="radio" name="category" value="streetlight">
+                  <div class="chip-icon">💡</div>
+                  <div class="chip-name" data-i18n="cat_streetlight">Streetlight</div>
+                </label>
+
+                <label class="category-chip-label" data-category="garbage" data-name="Garbage Dump" data-icon="🗑️">
+                  <input type="radio" name="category" value="garbage">
+                  <div class="chip-icon">🗑️</div>
+                  <div class="chip-name" data-i18n="cat_garbage">Garbage</div>
+                </label>
+
+                <label class="category-chip-label" data-category="drainage" data-name="Drainage Issue" data-icon="🌊">
+                  <input type="radio" name="category" value="drainage">
+                  <div class="chip-icon">🌊</div>
+                  <div class="chip-name" data-i18n="cat_drainage">Drainage</div>
+                </label>
+
+                <label class="category-chip-label" data-category="traffic" data-name="Traffic Signal" data-icon="🚦">
+                  <input type="radio" name="category" value="traffic">
+                  <div class="chip-icon">🚦</div>
+                  <div class="chip-name" data-i18n="cat_traffic">Traffic Signal</div>
+                </label>
+
+                <label class="category-chip-label" data-category="road_damage" data-name="Road Damage" data-icon="🛣️">
+                  <input type="radio" name="category" value="road_damage">
+                  <div class="chip-icon">🛣️</div>
+                  <div class="chip-name" data-i18n="cat_road_damage">Road Damage</div>
+                </label>
+
+                <label class="category-chip-label" data-category="property_damage" data-name="Public Property" data-icon="🌳">
+                  <input type="radio" name="category" value="property_damage">
+                  <div class="chip-icon">🌳</div>
+                  <div class="chip-name" data-i18n="cat_property_damage">Property Damage</div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Step 2: Image Upload & Holographic AI Scanner -->
+            <div class="form-step-card">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <label class="form-label" style="margin-bottom: 0;">2. Evidence Photo & AI Vision Scanner</label>
+                <button type="button" id="reset-image-btn" class="btn btn-sm btn-secondary" onclick="ReportController.resetImage()" style="display: none;">
+                  Change Photo
+                </button>
+              </div>
+              <p class="form-hint" style="margin-bottom: 1rem;">Upload a photo or choose a sample image to trigger real-time AI prototype computer vision analysis.</p>
+
+              <!-- Dropzone -->
+              <div id="image-dropzone" class="image-upload-area">
+                <input type="file" id="report-file-input" accept="image/*" style="display: none;">
+                <div class="upload-icon-circle">📷</div>
+                <h4 style="margin-bottom: 0.25rem;">Drop problem photo here or click to browse</h4>
+                <p style="font-size: 0.78rem; color: var(--text-muted);">Supports JPG, PNG, WEBP, SVG</p>
+
+                <div class="upload-actions-bar">
+                  <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('report-file-input').click()">
+                    📁 Upload File
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="ReportController.openCameraModal()">
+                    📸 Live Camera
+                  </button>
+                </div>
+
+                <!-- 1-Click Sample Test Images -->
+                <div style="margin-top: 1.25rem; border-top: 1px dashed var(--border-color); padding-top: 0.75rem;">
+                  <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 0.5rem;">
+                    QUICK DEMO IMAGES (1-CLICK TEST):
+                  </span>
+                  <div class="sample-images-row">
+                    <button type="button" class="sample-image-chip" data-src="assets/sample-pothole.svg" data-category="pothole">
+                      🕳️ Pothole Sample
+                    </button>
+                    <button type="button" class="sample-image-chip" data-src="assets/sample-streetlight.svg" data-category="streetlight">
+                      💡 Streetlight Sample
+                    </button>
+                    <button type="button" class="sample-image-chip" data-src="assets/sample-garbage.svg" data-category="garbage">
+                      🗑️ Garbage Sample
+                    </button>
+                    <button type="button" class="sample-image-chip" data-src="assets/sample-drainage.svg" data-category="drainage">
+                      🌊 Drainage Sample
+                    </button>
+                    <button type="button" class="sample-image-chip" data-src="assets/sample-traffic.svg" data-category="traffic">
+                      🚦 Signal Sample
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Holographic AI Scanner Viewfinder -->
+              <div id="ai-scanner-viewfinder" class="ai-scanner-viewfinder">
+                <img id="scanner-image-preview" class="scanner-image-preview" src="" alt="Civic Issue Preview">
+                <div class="scanner-laser-line"></div>
+                <div class="scanner-hologram-grid"></div>
+                <div class="ai-bounding-box">
+                  <span class="bounding-box-label">AI TARGET ACQUIRED</span>
+                </div>
+                <div style="position: absolute; bottom: 10px; left: 15px; z-index: 10; font-family: monospace; font-size: 0.75rem; color: #38bdf8; background: rgba(0,0,0,0.7); padding: 0.2rem 0.6rem; border-radius: 4px;">
+                  <span id="scanner-status-text">AI Vision Model Analyzing...</span>
+                </div>
+              </div>
+
+              <!-- AI Analysis Results Card -->
+              <div id="ai-analysis-result-card" class="ai-analysis-result-card">
+                <div class="ai-result-header">
+                  <div>
+                    <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: var(--accent-ai);">AI PROTOTYPE ANALYSIS</span>
+                    <h3 id="ai-detected-title" style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">Pothole detected</h3>
+                  </div>
+                  <div class="ai-confidence-meter">
+                    <div style="font-size: 0.8rem; font-weight: 700; color: #10b981;" id="ai-confidence-val">92% Confidence</div>
+                    <div class="confidence-bar-track">
+                      <div id="ai-confidence-bar" class="confidence-bar-fill" style="width: 92%;"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="ai-detected-details-grid">
+                  <div class="ai-detail-item">
+                    <span class="ai-detail-label">Assessed Severity</span>
+                    <span id="ai-severity-val" class="badge badge-high">HIGH</span>
+                  </div>
+                  <div class="ai-detail-item">
+                    <span class="ai-detail-label">Target Department</span>
+                    <span id="ai-department-val" class="ai-detail-val">Road Maintenance</span>
+                  </div>
+                  <div class="ai-detail-item">
+                    <span class="ai-detail-label">Model Engine</span>
+                    <span class="ai-detail-val" style="font-family: monospace; color: var(--accent-ai);">CivicVision-v2.4</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 3: Location & Geolocation -->
+            <div class="form-step-card">
+              <label class="form-label">3. Location & GPS Geolocation</label>
+              <p class="form-hint" style="margin-bottom: 1rem;">Use device GPS or select from regional Chennai ward hotspots.</p>
+
+              <div class="location-picker-box">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                  <button type="button" id="btn-use-gps" class="btn btn-primary btn-sm">
+                    🛰️ Use My GPS Location
+                  </button>
+                  <span id="current-coords-display" class="location-coords-badge">13.0850° N, 80.2101° E</span>
+                </div>
+                <div id="location-status-text" class="form-hint" style="margin-bottom: 0.75rem; color: var(--brand-primary); font-weight: 600;">
+                  ✓ Location pinned to Anna Nagar Zone
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                  <input type="text" id="report-location-input" value="12th Main Road, Anna Nagar, Chennai" placeholder="Enter landmark / street address" required>
+                </div>
+
+                <!-- Quick Location Preset Chips -->
+                <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.35rem;">
+                  POPULAR CHENNAI WARDS:
+                </div>
+                <div class="location-quick-presets">
+                  <button type="button" class="preset-loc-btn" data-address="12th Main Road, Anna Nagar, Chennai" data-lat="13.0850" data-lng="80.2101">Anna Nagar</button>
+                  <button type="button" class="preset-loc-btn" data-address="North Usman Road, T. Nagar, Chennai" data-lat="13.0418" data-lng="80.2341">T. Nagar</button>
+                  <button type="button" class="preset-loc-btn" data-address="100 Feet Bypass Road, Velachery, Chennai" data-lat="12.9750" data-lng="80.2210">Velachery</button>
+                  <button type="button" class="preset-loc-btn" data-address="Central Junction (EVR Periyar Salai), Chennai" data-lat="13.0827" data-lng="80.2707">Central Junction</button>
+                  <button type="button" class="preset-loc-btn" data-address="Luz Church Road, Mylapore, Chennai" data-lat="13.0339" data-lng="80.2676">Mylapore</button>
+                  <button type="button" class="preset-loc-btn" data-address="LB Road, Adyar, Chennai" data-lat="13.0012" data-lng="80.2565">Adyar</button>
+                </div>
+              </div>
+
+              <!-- Duplicate Complaint Warning Alert (Appears dynamically) -->
+              <div id="duplicate-alert-box" class="duplicate-alert-banner">
+                <div class="duplicate-header">
+                  <span>⚠️</span>
+                  <span>Possible Duplicate Complaint Detected</span>
+                </div>
+                <p id="duplicate-count-text" style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+                  We found 2 similar reports within 200 meters.
+                </p>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                  <button type="button" id="view-duplicate-complaint-btn" class="btn btn-sm btn-secondary" data-i18n="btn_view_existing">
+                    View Existing Complaint
+                  </button>
+                  <button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById('duplicate-alert-box').classList.remove('active')" data-i18n="btn_submit_anyway">
+                    Submit Anyway
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 4: Description & Smart Summary -->
+            <div class="form-step-card">
+              <label class="form-label">4. Details & AI Smart Summary</label>
+              
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem; color: var(--text-muted);">Issue Title / Brief</label>
+                <input type="text" id="report-title-input" placeholder="e.g. Deep pothole near main junction causing skidding risk">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem; color: var(--text-muted);">Detailed Description</label>
+                <textarea id="report-desc-input" rows="3" placeholder="Describe the problem, approximate size, how long it has existed, or nearby landmarks..."></textarea>
+              </div>
+
+              <!-- Dynamic Priority Score Gauge -->
+              <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: var(--radius-lg); margin-top: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                  <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">
+                    Prototype AI Priority Score
+                  </span>
+                  <span id="report-priority-score-num" class="priority-score-num" style="color: #f97316;">87/100</span>
+                </div>
+                <div class="priority-bar-track">
+                  <div id="report-priority-score-bar" class="priority-bar-fill" style="width: 87%;"></div>
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.4rem;">
+                  Calculated from: Severity + Public Impact + Proximity + Traffic Hazard.
+                </div>
+              </div>
+
+              <!-- AI Smart Report Summary Card -->
+              <div class="ai-smart-summary-box">
+                <div class="ai-smart-summary-title">
+                  <span>✨ AI-Generated Smart Summary</span>
+                </div>
+                <div id="smart-summary-content">
+                  <!-- Rendered dynamically -->
+                  <div style="font-size: 0.88rem;">
+                    <strong>Issue:</strong> Pothole | <strong>Severity:</strong> High | <strong>Department:</strong> Road Maintenance
+                  </div>
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <div style="margin-top: 2rem;">
+                <button type="submit" id="btn-submit-report" class="btn btn-primary btn-lg" style="width: 100%;">
+                  🚀 Submit Complaint & Start AI Accountability Workflow
+                </button>
+              </div>
+            </div>
+          </form>
+
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           VIEW 3: MY COMPLAINTS
+           ==================================================================== -->
+      <section id="view-complaints" class="spa-view">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h2 style="font-size: 1.8rem; font-weight: 800;" data-i18n="nav_complaints">My Complaints</h2>
+            <p style="color: var(--text-secondary);">Track progress, review official action logs, and execute Citizen Verification.</p>
+          </div>
+          <button class="btn btn-primary" onclick="AppRouter.navigate('report')">
+            + Report New Problem
+          </button>
+        </div>
+
+        <!-- Search and Filters Bar -->
+        <div class="card" style="margin-bottom: 1.5rem; padding: 1rem;">
+          <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+            <div style="flex: 1; min-width: 250px;">
+              <input type="text" id="complaints-search-input" placeholder="🔍 Search complaints by ID, title, ward, or category...">
+            </div>
+          </div>
+
+          <!-- Filter Pills -->
+          <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.85rem;">
+            <button class="btn btn-sm btn-secondary complaints-filter-btn active" data-status="all">All</button>
+            <button class="btn btn-sm btn-secondary complaints-filter-btn" data-status="SUBMITTED">Submitted</button>
+            <button class="btn btn-sm btn-secondary complaints-filter-btn" data-status="VERIFIED">AI Verified</button>
+            <button class="btn btn-sm btn-secondary complaints-filter-btn" data-status="ASSIGNED">Assigned</button>
+            <button class="btn btn-sm btn-secondary complaints-filter-btn" data-status="IN PROGRESS">In Progress</button>
+            <button class="btn btn-sm btn-secondary complaints-filter-btn" data-status="RESOLVED">Resolved (Pending Verify)</button>
+            <button class="btn btn-sm btn-secondary complaints-filter-btn" data-status="CITIZEN VERIFIED">Citizen Verified</button>
+            <button class="btn btn-sm btn-secondary complaints-filter-btn" data-status="REOPENED">Reopened 🚨</button>
+          </div>
+        </div>
+
+        <!-- Complaints Grid -->
+        <div id="my-complaints-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.25rem;">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           VIEW 4: COMPLAINT DETAILS & TIMELINE
+           ==================================================================== -->
+      <section id="view-details" class="spa-view">
+        <div style="margin-bottom: 1rem;">
+          <button class="btn btn-sm btn-secondary" onclick="AppRouter.navigate('complaints')">
+            &larr; Back to Complaints List
+          </button>
+        </div>
+
+        <!-- Overdue Escalation Alert Banner in Details -->
+        <div id="detail-escalation-alert" style="background: #fee2e2; border: 1px solid #ef4444; border-radius: var(--radius-lg); padding: 1rem; margin-bottom: 1.5rem; display: none; align-items: center; gap: 1rem;">
+          <div style="font-size: 1.8rem; color: #ef4444;">⚠️</div>
+          <div>
+            <h4 style="color: #991b1b; font-weight: 800;">Escalation Alert Triggered</h4>
+            <p id="detail-escalation-reason" style="font-size: 0.85rem; color: #b91c1c;"></p>
+          </div>
+        </div>
+
+        <!-- Details Hero Card -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <span id="detail-complaint-id" style="font-family: monospace; font-size: 0.95rem; font-weight: 800; color: var(--brand-primary);">CT-2026-001284</span>
+              <h2 id="detail-title" style="font-size: 1.5rem; font-weight: 800; margin-top: 0.25rem;">Pothole reported</h2>
+              <p style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                📍 <span id="detail-location-text">12th Main Road, Anna Nagar, Chennai</span>
+              </p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <span id="detail-status-badge" class="badge badge-in-progress">IN PROGRESS</span>
+            </div>
+          </div>
+
+          <!-- Metadata Pill Bar -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; background: var(--bg-tertiary); padding: 1rem; border-radius: var(--radius-md);">
+            <div>
+              <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Department</span>
+              <div id="detail-department" style="font-weight: 700; font-size: 0.88rem; color: var(--text-primary);">Road Maintenance</div>
+            </div>
+            <div>
+              <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Assigned Officer</span>
+              <div id="detail-officer" style="font-weight: 700; font-size: 0.88rem; color: var(--text-primary);">K. Senthil Kumar (AE)</div>
+            </div>
+            <div>
+              <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Assessed Severity</span>
+              <div><span id="detail-severity" class="severity-pill high">HIGH</span></div>
+            </div>
+            <div>
+              <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Priority Score</span>
+              <div style="font-weight: 800; font-size: 0.95rem; color: var(--brand-primary);" id="detail-priority-score">88/100</div>
+              <div class="priority-bar-track" style="height: 4px; margin-top: 0.25rem;">
+                <div id="detail-priority-bar" class="priority-bar-fill" style="width: 88%;"></div>
+              </div>
+            </div>
+            <div>
+              <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Reported On</span>
+              <div id="detail-created-date" style="font-size: 0.82rem; color: var(--text-secondary);">29 Aug 2026</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Judge / Hackathon Demonstration Simulation Controls -->
+        <div class="judge-controls-panel">
+          <div class="judge-controls-header">
+            <div>
+              <strong style="font-size: 0.85rem; color: var(--accent-ai);">⚡ JUDGE / DEMO SIMULATION CONTROLS</strong>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Step through the civic lifecycle in seconds to test workflows.</div>
+            </div>
+            <span class="prototype-disclaimer-pill">Demo Mode</span>
+          </div>
+          <div class="judge-controls-buttons">
+            <button class="btn btn-sm btn-secondary" onclick="ComplaintsController.simulateStatusTransition('VERIFIED')">
+              1. Simulate AI Verified
+            </button>
+            <button class="btn btn-sm btn-secondary" onclick="ComplaintsController.simulateStatusTransition('ASSIGNED')">
+              2. Simulate Assigned
+            </button>
+            <button class="btn btn-sm btn-secondary" onclick="ComplaintsController.simulateStatusTransition('IN PROGRESS')">
+              3. Simulate Work In Progress
+            </button>
+            <button class="btn btn-sm btn-ai" onclick="ComplaintsController.simulateStatusTransition('RESOLVED')">
+              4. Simulate Authority Resolution (Triggers Citizen Verification)
+            </button>
+          </div>
+        </div>
+
+        <!-- Citizen Verification Action Card (The differentiating feature) -->
+        <div id="detail-citizen-verify-box" class="citizen-verify-box" style="display: none;">
+          <h3 class="citizen-verify-title" data-i18n="verify_heading">Has this problem actually been fixed?</h3>
+          <p class="citizen-verify-sub" data-i18n="verify_sub">
+            The civic contractor has marked this issue as resolved. Please verify if the repair is completed on-ground.
+          </p>
+          <div class="citizen-verify-buttons">
+            <button class="btn btn-lg btn-accent" onclick="ComplaintsController.handleCitizenVerification(true)">
+              ✅ YES, ISSUE FIXED (VERIFY & CLOSE)
+            </button>
+            <button class="btn btn-lg btn-danger" onclick="ComplaintsController.handleCitizenVerification(false)">
+              ❌ NO, STILL EXISTS (REOPEN & ESCALATE)
+            </button>
+          </div>
+        </div>
+
+        <!-- Two-Column Layout: Timeline & Photo Evidence -->
+        <div style="display: grid; grid-template-columns: 1.7fr 1fr; gap: 1.5rem;">
+          
+          <!-- Visual 6-Stage Timeline -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>⏱️ End-to-End Resolution Timeline</span>
+              </div>
+            </div>
+            <div class="complaint-timeline-wrapper">
+              <div id="detail-timeline-track" class="timeline-track">
+                <!-- Dynamically rendered steps -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Photo Evidence & Location Card -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>📷 Uploaded Photo Evidence</span>
+              </div>
+            </div>
+            <div style="border-radius: var(--radius-lg); overflow: hidden; background: var(--bg-tertiary); max-height: 300px; display: flex; align-items: center; justify-content: center;">
+              <img id="detail-photo-preview" src="assets/sample-pothole.svg" alt="Complaint Photo" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
+              Geotagged & verified with camera EXIF/GPS coordinate timestamp.
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           VIEW 5: CIVIC MAP
+           ==================================================================== -->
+      <section id="view-map" class="spa-view">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <h2 style="font-size: 1.8rem; font-weight: 800;" data-i18n="nav_map">Interactive Civic Map</h2>
+            <p style="color: var(--text-secondary);">Real-time geographic distribution of reported civic issues across Chennai.</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="AppRouter.navigate('report')">
+            + Pin New Problem
+          </button>
+        </div>
+
+        <div class="map-view-container">
+          <!-- Floating Category & Status Filters -->
+          <div class="map-filter-overlay">
+            <div class="map-filter-header">
+              <h4><span>🔍</span> Map Filters</h4>
+            </div>
+            <div class="map-filter-chips">
+              <button class="map-filter-btn active" data-filter="all">All Issues</button>
+              <button class="map-filter-btn" data-filter="pothole">🕳️ Potholes</button>
+              <button class="map-filter-btn" data-filter="streetlight">💡 Lights</button>
+              <button class="map-filter-btn" data-filter="garbage">🗑️ Garbage</button>
+              <button class="map-filter-btn" data-filter="drainage">🌊 Drainage</button>
+              <button class="map-filter-btn" data-filter="traffic">🚦 Signals</button>
+              <button class="map-filter-btn" data-filter="critical">🚨 High Priority</button>
+              <button class="map-filter-btn" data-filter="resolved">✅ Resolved</button>
+            </div>
+          </div>
+
+          <!-- Map Legend -->
+          <div class="map-legend-overlay">
+            <div class="legend-row"><span class="legend-dot critical"></span> Critical / Overdue</div>
+            <div class="legend-row"><span class="legend-dot high"></span> High Severity</div>
+            <div class="legend-row"><span class="legend-dot medium"></span> Medium / Low</div>
+            <div class="legend-row"><span class="legend-dot resolved"></span> Citizen Verified</div>
+          </div>
+
+          <!-- Leaflet Map Container -->
+          <div id="civic-leaflet-map"></div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           VIEW 6: PUBLIC TRANSPARENCY DASHBOARD
+           ==================================================================== -->
+      <section id="view-public-dashboard" class="spa-view">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h2 style="font-size: 1.8rem; font-weight: 800;" data-i18n="nav_public">Public Transparency Dashboard</h2>
+            <p style="color: var(--text-secondary);">Open civic metrics, SLA resolution rates, and department performance rankings.</p>
+          </div>
+          <span class="badge badge-verified" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+            🟢 LIVE OPEN CIVIC DATA
+          </span>
+        </div>
+
+        <!-- Transparency High-Level KPIs -->
+        <div class="transparency-kpi-row">
+          <div class="transparency-kpi">
+            <div id="pub-total-complaints" class="transparency-kpi-val">1,284</div>
+            <div class="transparency-kpi-title" data-i18n="stat_total_reports">TOTAL REPORTS</div>
+          </div>
+          <div class="transparency-kpi">
+            <div id="pub-resolved-complaints" class="transparency-kpi-val" style="color: #10b981;">947</div>
+            <div class="transparency-kpi-title" data-i18n="stat_resolved">RESOLVED</div>
+          </div>
+          <div class="transparency-kpi">
+            <div id="pub-pending-complaints" class="transparency-kpi-val" style="color: #f59e0b;">337</div>
+            <div class="transparency-kpi-title" data-i18n="stat_pending">PENDING</div>
+          </div>
+          <div class="transparency-kpi">
+            <div id="pub-resolution-rate" class="transparency-kpi-val" style="color: #0284c7;">73.7%</div>
+            <div class="transparency-kpi-title" data-i18n="stat_resolution_rate">RESOLUTION RATE</div>
+          </div>
+          <div class="transparency-kpi">
+            <div id="pub-avg-days" class="transparency-kpi-val">2.4 days</div>
+            <div class="transparency-kpi-title" data-i18n="stat_avg_time">AVG RESOLUTION TIME</div>
+          </div>
+          <div class="transparency-kpi">
+            <div id="pub-citizen-verify-rate" class="transparency-kpi-val" style="color: #059669;">88.4%</div>
+            <div class="transparency-kpi-title">CITIZEN VERIFY RATE</div>
+          </div>
+        </div>
+
+        <!-- Pure HTML5 Canvas Charts Grid -->
+        <div class="charts-grid">
+          <!-- Donut Chart: Categories -->
+          <div class="chart-card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>🥧 Issue Category Breakdown</span>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="category-donut-canvas" class="chart-canvas"></canvas>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item"><span class="legend-color" style="background: #f97316;"></span> Potholes (35%)</div>
+              <div class="legend-item"><span class="legend-color" style="background: #eab308;"></span> Streetlights (22%)</div>
+              <div class="legend-item"><span class="legend-color" style="background: #84cc16;"></span> Garbage (20%)</div>
+              <div class="legend-item"><span class="legend-color" style="background: #06b6d4;"></span> Drainage (15%)</div>
+              <div class="legend-item"><span class="legend-color" style="background: #ef4444;"></span> Signals (8%)</div>
+            </div>
+          </div>
+
+          <!-- Bar Chart: Area-Wise -->
+          <div class="chart-card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>📊 Area-Wise Complaint Volume</span>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="area-bar-canvas" class="chart-canvas"></canvas>
+            </div>
+          </div>
+
+          <!-- Line Chart: 6-Month Trend -->
+          <div class="chart-card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>📈 6-Month Resolution Trend</span>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="trend-line-canvas" class="chart-canvas"></canvas>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item"><span class="legend-color" style="background: #38bdf8;"></span> Submitted Reports</div>
+              <div class="legend-item"><span class="legend-color" style="background: #10b981;"></span> Resolved & Verified</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Department Performance Leaderboard -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span>🏆 Department Accountability & SLA Leaderboard</span>
+            </div>
+          </div>
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Department / Agency</th>
+                <th>Complaints</th>
+                <th>Resolved</th>
+                <th>Avg Response</th>
+                <th>SLA Grade</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="leaderboard-rank top-1">🥇 1</td>
+                <td><strong>Urbaser Sumeet / GCC Solid Waste</strong></td>
+                <td>340</td>
+                <td>318</td>
+                <td>1.2 days</td>
+                <td><span class="badge badge-resolved">A+ (93.5%)</span></td>
+              </tr>
+              <tr>
+                <td class="leaderboard-rank top-2">🥈 2</td>
+                <td><strong>GCC Road Maintenance (Zone 8 & 10)</strong></td>
+                <td>460</td>
+                <td>390</td>
+                <td>2.1 days</td>
+                <td><span class="badge badge-resolved">A (84.7%)</span></td>
+              </tr>
+              <tr>
+                <td class="leaderboard-rank top-3">🥉 3</td>
+                <td><strong>CMWSSB (Metro Water & Sewerage)</strong></td>
+                <td>280</td>
+                <td>210</td>
+                <td>2.8 days</td>
+                <td><span class="badge badge-in-progress">B+ (75.0%)</span></td>
+              </tr>
+              <tr>
+                <td class="leaderboard-rank">4</td>
+                <td><strong>TANGEDCO Streetlight Unit</strong></td>
+                <td>160</td>
+                <td>115</td>
+                <td>4.8 days</td>
+                <td><span class="badge badge-reopened">C (71.8%)</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           VIEW 7: AI INSIGHTS
+           ==================================================================== -->
+      <section id="view-insights" class="spa-view">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <h2 style="font-size: 1.8rem; font-weight: 800;" data-i18n="nav_insights">AI Civic Insights</h2>
+              <span class="prototype-disclaimer-pill">Prototype Intelligence</span>
+            </div>
+            <p style="color: var(--text-secondary);">Automated pattern recognition, recurrent failure cluster detection, and predictive civic recommendations.</p>
+          </div>
+          <button class="btn btn-ai" onclick="DashboardController.renderAIInsights(); NotificationService.showToast({title: 'AI Models Re-run', message: 'Pattern recognition recalculated on active complaints.', type: 'ai'})">
+            ✨ Refresh AI Analysis
+          </button>
+        </div>
+
+        <!-- AI Insights Cards Grid -->
+        <div id="ai-insights-cards-container" class="ai-insights-grid">
+          <!-- Rendered dynamically -->
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           VIEW 8: NOTIFICATIONS
+           ==================================================================== -->
+      <section id="view-notifications" class="spa-view">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h2 style="font-size: 1.8rem; font-weight: 800;" data-i18n="nav_notifications">Notifications</h2>
+            <p style="color: var(--text-secondary);">Real-time status changes, SLA escalation warnings, and citizen verification requests.</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="NotificationService.markAllAsRead()">
+            Mark All as Read
+          </button>
+        </div>
+
+        <div id="notifications-list-container">
+          <!-- Rendered dynamically -->
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           VIEW 9: PROFILE & SETTINGS
+           ==================================================================== -->
+      <section id="view-profile" class="spa-view">
+        <div style="max-width: 700px; margin: 0 auto;">
+          <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 0.5rem;" data-i18n="nav_profile">Citizen Profile & Settings</h2>
+          <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Manage contact details, language preferences, themes, and test data.</p>
+
+          <!-- Citizen Info Form -->
+          <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="card-header">
+              <div class="card-title">
+                <span>👤 Citizen Contact Details</span>
+              </div>
+            </div>
+            <form onsubmit="ProfileController.saveProfile(event)">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" id="prof-name-input" value="Arun Kumar" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Phone Number (For SMS Status Alerts)</label>
+                <input type="tel" id="prof-phone-input" value="+91 98401 23456" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="prof-email-input" value="arun.civic@example.com" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Home Ward / Area</label>
+                <input type="text" id="prof-ward-input" value="Ward 104 - Anna Nagar (Zone 8)" required>
+              </div>
+
+              <button type="submit" class="btn btn-primary">
+                Save Profile Details
+              </button>
+            </form>
+          </div>
+
+          <!-- Language & Theme Preferences -->
+          <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="card-header">
+              <div class="card-title">
+                <span>🌐 Language & Appearance</span>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+              <div>
+                <strong>Language Preference</strong>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Switch between English and Tamil (தமிழ்)</p>
+              </div>
+              <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-sm btn-secondary lang-toggle-btn active" data-lang="en" onclick="I18nService.setLanguage('en')">English</button>
+                <button class="btn btn-sm btn-secondary lang-toggle-btn" data-lang="ta" onclick="I18nService.setLanguage('ta')">தமிழ்</button>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong>Theme Mode</strong>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Choose between Light and Dark interface styles</p>
+              </div>
+              <button class="btn btn-secondary btn-sm theme-toggle-btn">
+                <span class="theme-icon">🌙</span> Toggle Theme
+              </button>
+            </div>
+          </div>
+
+          <!-- Hackathon Prototype Data Control -->
+          <div class="card" style="border-left: 4px solid var(--brand-primary);">
+            <div class="card-header">
+              <div class="card-title">
+                <span>💾 Hackathon Demo Data Management</span>
+              </div>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+              Reset all complaints to default 10+ realistic demo records or export current JSON data.
+            </p>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <button class="btn btn-secondary btn-sm" onclick="StorageService.resetDemoData(); location.reload();">
+                🔄 Load Default Demo Data (10+ Complaints)
+              </button>
+              <button class="btn btn-outline-danger btn-sm" onclick="if(confirm('Clear all stored complaint data?')) { StorageService.clearAllData(); location.reload(); }">
+                🗑️ Clear Storage
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="mobile-bottom-nav">
+    <a href="#dashboard" class="mobile-nav-item active" data-route="dashboard">
+      <span class="mob-icon">📊</span>
+      <span data-i18n="nav_dashboard">Home</span>
+    </a>
+    <a href="#map" class="mobile-nav-item" data-route="map">
+      <span class="mob-icon">📍</span>
+      <span data-i18n="nav_map">Map</span>
+    </a>
+    <a href="#report" class="mobile-nav-item report-fab-item" data-route="report">
+      <div class="mobile-report-fab">+</div>
+    </a>
+    <a href="#complaints" class="mobile-nav-item" data-route="complaints">
+      <span class="mob-icon">📂</span>
+      <span data-i18n="nav_complaints">Complaints</span>
+    </a>
+    <a href="#profile" class="mobile-nav-item" data-route="profile">
+      <span class="mob-icon">⚙️</span>
+      <span data-i18n="nav_profile">Profile</span>
+    </a>
+  </nav>
+
+  <!-- Live Camera View Modal -->
+  <div id="camera-modal" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 style="font-size: 1.1rem; font-weight: 700;">📸 Live Camera Capture</h3>
+        <button class="btn-icon" onclick="ReportController.closeCameraModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="camera-preview-box">
+          <video id="camera-video-feed" autoplay playsinline muted></video>
+        </div>
+        <div class="camera-controls">
+          <button type="button" class="btn btn-primary" onclick="ReportController.captureCameraFrame()">
+            📸 Snap Photo
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="ReportController.closeCameraModal()">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submission Success Modal -->
+  <div id="submission-success-modal" class="modal-backdrop">
+    <div class="modal-dialog" style="text-align: center;">
+      <div class="modal-body" style="padding: 2.5rem 1.5rem;">
+        <div style="font-size: 3.5rem; margin-bottom: 0.5rem; animation: pulseWarning 1.5s infinite;">🎉</div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.35rem;">
+          Complaint Submitted Successfully
+        </h2>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
+          Your complaint has been verified by AI and assigned a unique tracking ID.
+        </p>
+
+        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.25rem; text-align: left; margin-bottom: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">COMPLAINT ID</span>
+            <span id="success-complaint-id" style="font-family: monospace; font-weight: 800; color: var(--brand-primary); font-size: 0.95rem;">CT-2026-001284</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">CATEGORY</span>
+            <span id="success-category" style="font-weight: 700; font-size: 0.88rem;">🕳️ Pothole</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">SEVERITY</span>
+            <span id="success-severity" class="badge badge-high">HIGH</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">PRIORITY SCORE</span>
+            <span id="success-priority" style="font-weight: 800; color: var(--brand-primary);">87/100</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">LOCATION</span>
+            <span id="success-location" style="font-size: 0.82rem; color: var(--text-secondary); max-width: 60%; text-align: right;">12th Main Road, Anna Nagar</span>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+          <button id="success-view-details-btn" class="btn btn-primary" style="flex: 1;">
+            View Timeline & Track Progress &rarr;
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS for Civic Map (Zero API Key required) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Modular Vanilla JavaScript Application Stack -->
+  <script src="js/storage.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/report.js"></script>
+  <script src="js/complaints.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>

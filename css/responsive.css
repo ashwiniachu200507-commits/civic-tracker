@@ -1,0 +1,166 @@
+/* ==========================================================================
+   CivicTrack AI - Mobile & Responsive Layouts
+   ========================================================================== */
+
+/* Mobile Bottom Navigation Bar (Hidden on Desktop) */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--mobile-nav-height);
+  background: var(--bg-glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border-color);
+  z-index: 150;
+  padding: 0 0.5rem;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  flex: 1;
+}
+
+.mobile-nav-item i, .mobile-nav-item .mob-icon {
+  font-size: 1.25rem;
+}
+
+.mobile-nav-item.active {
+  color: var(--brand-primary);
+}
+
+/* High-Visibility Center Floating Report Button on Mobile */
+.mobile-nav-item.report-fab-item {
+  position: relative;
+  top: -14px;
+}
+
+.mobile-report-fab {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.4);
+  border: 3px solid var(--bg-secondary);
+  transition: transform var(--transition-fast);
+}
+
+.mobile-report-fab:hover, .mobile-report-fab:active {
+  transform: scale(1.08);
+}
+
+/* Responsive Media Queries */
+@media (max-width: 1024px) {
+  :root {
+    --sidebar-width: 220px;
+  }
+  
+  .dashboard-layout-2col {
+    grid-template-columns: 1fr;
+  }
+  
+  .civic-hero-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --header-height: 60px;
+  }
+
+  .app-sidebar {
+    display: none; /* Hidden on mobile; bottom nav is used instead */
+  }
+
+  .app-main {
+    margin-left: 0;
+    width: 100%;
+    padding: 1.25rem 1rem calc(var(--mobile-nav-height) + 1.5rem);
+  }
+
+  .mobile-bottom-nav {
+    display: flex;
+  }
+
+  .civic-hero-banner {
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+  }
+
+  .hero-title {
+    font-size: 1.5rem;
+  }
+
+  .hero-subtitle {
+    font-size: 0.92rem;
+  }
+
+  .stat-value {
+    font-size: 1.8rem;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .category-chips-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .map-view-container {
+    height: calc(100vh - var(--header-height) - var(--mobile-nav-height) - 3rem);
+    min-height: 420px;
+  }
+
+  .map-filter-overlay {
+    max-width: calc(100% - 2rem);
+    left: 1rem;
+    top: 1rem;
+  }
+
+  .modal-dialog {
+    max-width: 95%;
+  }
+
+  .citizen-verify-buttons {
+    flex-direction: column;
+  }
+
+  .citizen-verify-buttons .btn {
+    width: 100%;
+  }
+
+  #toast-container {
+    left: 1rem;
+    right: 1rem;
+    top: calc(var(--header-height) + 0.5rem);
+  }
+
+  .toast {
+    min-width: unset;
+    max-width: 100%;
+  }
+}

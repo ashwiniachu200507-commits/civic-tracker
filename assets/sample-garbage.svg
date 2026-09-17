@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="100%" height="100%">
+  <rect width="600" height="400" fill="#334155"/>
+  <rect x="0" y="280" width="600" height="120" fill="#1e293b"/>
+  
+  <!-- Green GCC Dustbin (Tilted/Overflowing) -->
+  <rect x="140" y="160" width="120" height="160" rx="10" fill="#15803d" stroke="#166534" stroke-width="4"/>
+  <rect x="130" y="145" width="140" height="20" rx="4" fill="#166534"/>
+  
+  <!-- Overflowing Trash Pile -->
+  <path d="M 120,320 C 130,220 280,210 320,240 C 360,200 480,230 460,320 Z" fill="#64748b"/>
+  <path d="M 180,240 C 220,180 340,190 380,260 Z" fill="#78716c"/>
+  
+  <!-- Discarded Boxes & Plastic Bags -->
+  <rect x="220" y="250" width="60" height="45" rx="3" fill="#b45309" transform="rotate(15 220 250)"/>
+  <path d="M 320,270 C 350,250 380,280 360,310 Z" fill="#0284c7" opacity="0.8"/>
+  <circle cx="280" cy="300" r="14" fill="#e2e8f0"/>
+  <circle cx="390" cy="290" r="18" fill="#f59e0b"/>
+  
+  <!-- Detection Watermark -->
+  <rect x="20" y="20" width="220" height="40" rx="8" fill="rgba(15, 23, 42, 0.8)"/>
+  <text x="35" y="45" font-family="'Plus Jakarta Sans', sans-serif" font-size="14" font-weight="700" fill="#a3e635">🗑️ SOLID WASTE HEAP</text>
+</svg>
