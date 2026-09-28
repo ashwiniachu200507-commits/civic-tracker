@@ -6,6 +6,9 @@
   <title>CivicTrack AI - Public Issue Reporting & Accountability Platform</title>
   <meta name="description" content="Report the Problem. Track the Action. Verify the Solution. Citizen-focused civic accountability platform with AI verification and citizen verification.">
 
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
+
   <!-- Leaflet CSS for Civic Map (Zero API Key required) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 
@@ -197,6 +200,63 @@
           </div>
         </div>
 
+        <!-- Live Civic Pulse & Metrics Section -->
+        <div class="civic-pulse-card">
+          <div class="pulse-header">
+            <div>
+              <h3 style="font-size: 1.15rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                <span>📊</span> <span data-i18n="pulse_title">Live Civic Health & Resolution Pulse</span>
+              </h3>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;" data-i18n="pulse_subtitle">
+                Real-time SLA status and category distribution computed from active citizen complaints.
+              </p>
+            </div>
+            <span class="badge" style="background: var(--bg-tertiary); color: var(--brand-primary); font-size: 0.75rem; font-weight: 700;">
+              ⚡ Dynamic Local Data
+            </span>
+          </div>
+
+          <!-- Overall Status Segmented Bar -->
+          <div style="margin-bottom: 0.5rem; display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700;">
+            <span style="color: var(--text-muted); text-transform: uppercase;">Overall Status Distribution</span>
+            <span id="pulse-resolution-percentage" style="color: #10b981;">0% Resolved / Verified</span>
+          </div>
+          <div class="pulse-segmented-bar">
+            <div id="pulse-segment-resolved" class="pulse-segment resolved" style="width: 50%;" title="Resolved / Citizen Verified"></div>
+            <div id="pulse-segment-inprogress" class="pulse-segment inprogress" style="width: 25%;" title="In Progress / Assigned"></div>
+            <div id="pulse-segment-reopened" class="pulse-segment reopened" style="width: 15%;" title="Reopened / Escalated"></div>
+            <div id="pulse-segment-submitted" class="pulse-segment submitted" style="width: 10%;" title="Submitted"></div>
+          </div>
+          <div class="pulse-legend-grid">
+            <div class="pulse-legend-item">
+              <span class="pulse-legend-dot" style="background: #10b981;"></span>
+              <span>Resolved: <strong id="pulse-count-resolved">0</strong></span>
+            </div>
+            <div class="pulse-legend-item">
+              <span class="pulse-legend-dot" style="background: #f59e0b;"></span>
+              <span>In Progress: <strong id="pulse-count-inprogress">0</strong></span>
+            </div>
+            <div class="pulse-legend-item">
+              <span class="pulse-legend-dot" style="background: #ef4444;"></span>
+              <span>Reopened: <strong id="pulse-count-reopened">0</strong></span>
+            </div>
+            <div class="pulse-legend-item">
+              <span class="pulse-legend-dot" style="background: #64748b;"></span>
+              <span>New Reports: <strong id="pulse-count-submitted">0</strong></span>
+            </div>
+          </div>
+
+          <!-- Category Breakdown Row -->
+          <div style="margin-top: 1.5rem; border-top: 1px dashed var(--border-color); padding-top: 1.25rem;">
+            <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.75rem;">
+              Top Issue Categories Active on Ground
+            </div>
+            <div id="dashboard-category-pulse-list">
+              <!-- Dynamically rendered -->
+            </div>
+          </div>
+        </div>
+
         <!-- Quick Action Cards Grid -->
         <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">Quick Actions</h3>
         <div class="quick-actions-grid">
@@ -287,9 +347,41 @@
             <span class="prototype-disclaimer-pill">AI Prototype Analysis</span>
           </div>
 
+          <!-- Multi-Step Interactive Progress Bar -->
+          <div class="report-steps-progress" role="progressbar" aria-label="Complaint submission steps">
+            <div class="report-step-node active" id="report-step-nav-1" onclick="ReportController.scrollToStep(1)">
+              <div class="report-step-circle">1</div>
+              <div class="report-step-meta">
+                <span class="report-step-title" data-i18n="step_1_title">Category</span>
+                <span class="report-step-sub">Select Issue</span>
+              </div>
+            </div>
+            <div class="report-step-node" id="report-step-nav-2" onclick="ReportController.scrollToStep(2)">
+              <div class="report-step-circle">2</div>
+              <div class="report-step-meta">
+                <span class="report-step-title" data-i18n="step_2_title">Evidence & AI</span>
+                <span class="report-step-sub">Vision Scan</span>
+              </div>
+            </div>
+            <div class="report-step-node" id="report-step-nav-3" onclick="ReportController.scrollToStep(3)">
+              <div class="report-step-circle">3</div>
+              <div class="report-step-meta">
+                <span class="report-step-title" data-i18n="step_3_title">Location</span>
+                <span class="report-step-sub">GPS Geotag</span>
+              </div>
+            </div>
+            <div class="report-step-node" id="report-step-nav-4" onclick="ReportController.scrollToStep(4)">
+              <div class="report-step-circle">4</div>
+              <div class="report-step-meta">
+                <span class="report-step-title" data-i18n="step_4_title">Details</span>
+                <span class="report-step-sub">Submit & Track</span>
+              </div>
+            </div>
+          </div>
+
           <form id="civic-report-form">
             <!-- Step 1: Category Selection -->
-            <div class="form-step-card">
+            <div class="form-step-card" id="report-step-1">
               <label class="form-label">1. Select Problem Category</label>
               <div class="category-chips-grid">
                 <label class="category-chip-label selected" data-category="pothole" data-name="Pothole" data-icon="🕳️">
@@ -337,7 +429,7 @@
             </div>
 
             <!-- Step 2: Image Upload & Holographic AI Scanner -->
-            <div class="form-step-card">
+            <div class="form-step-card" id="report-step-2">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                 <label class="form-label" style="margin-bottom: 0;">2. Evidence Photo & AI Vision Scanner</label>
                 <button type="button" id="reset-image-btn" class="btn btn-sm btn-secondary" onclick="ReportController.resetImage()" style="display: none;">
@@ -351,7 +443,7 @@
                 <input type="file" id="report-file-input" accept="image/*" style="display: none;">
                 <div class="upload-icon-circle">📷</div>
                 <h4 style="margin-bottom: 0.25rem;">Drop problem photo here or click to browse</h4>
-                <p style="font-size: 0.78rem; color: var(--text-muted);">Supports JPG, PNG, WEBP, SVG</p>
+                <p style="font-size: 0.78rem; color: var(--text-muted);">Supports JPG, PNG, WEBP, SVG (Max 10MB)</p>
 
                 <div class="upload-actions-bar">
                   <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('report-file-input').click()">
@@ -433,7 +525,7 @@
             </div>
 
             <!-- Step 3: Location & Geolocation -->
-            <div class="form-step-card">
+            <div class="form-step-card" id="report-step-3">
               <label class="form-label">3. Location & GPS Geolocation</label>
               <p class="form-hint" style="margin-bottom: 1rem;">Use device GPS or select from regional Chennai ward hotspots.</p>
 
@@ -487,7 +579,7 @@
             </div>
 
             <!-- Step 4: Description & Smart Summary -->
-            <div class="form-step-card">
+            <div class="form-step-card" id="report-step-4">
               <label class="form-label">4. Details & AI Smart Summary</label>
               
               <div class="form-group">
@@ -721,12 +813,12 @@
       </section>
 
       <!-- ====================================================================
-           VIEW 5: CIVIC MAP
+           VIEW 5: CIVIC MAP & CIVIC LOCATION EXPLORER
            ==================================================================== -->
       <section id="view-map" class="spa-view">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
           <div>
-            <h2 style="font-size: 1.8rem; font-weight: 800;" data-i18n="nav_map">Interactive Civic Map</h2>
+            <h2 style="font-size: 1.8rem; font-weight: 800;" data-i18n="nav_map">Civic Map</h2>
             <p style="color: var(--text-secondary);">Real-time geographic distribution of reported civic issues across Chennai.</p>
           </div>
           <button class="btn btn-primary btn-sm" onclick="AppRouter.navigate('report')">
@@ -734,34 +826,51 @@
           </button>
         </div>
 
-        <div class="map-view-container">
-          <!-- Floating Category & Status Filters -->
-          <div class="map-filter-overlay">
-            <div class="map-filter-header">
-              <h4><span>🔍</span> Map Filters</h4>
+        <!-- CivicTrack Issue Map -->
+        <div id="section-leaflet-card" class="card" style="padding: 1.25rem; margin-bottom: 2rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <h3 style="font-size: 1.2rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                <span>📍</span> <span>CivicTrack Issue Hotspots</span>
+              </h3>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0.2rem 0 0 0;">
+                Live issue markers categorized by severity, priority score, and resolution status.
+              </p>
             </div>
-            <div class="map-filter-chips">
-              <button class="map-filter-btn active" data-filter="all">All Issues</button>
-              <button class="map-filter-btn" data-filter="pothole">🕳️ Potholes</button>
-              <button class="map-filter-btn" data-filter="streetlight">💡 Lights</button>
-              <button class="map-filter-btn" data-filter="garbage">🗑️ Garbage</button>
-              <button class="map-filter-btn" data-filter="drainage">🌊 Drainage</button>
-              <button class="map-filter-btn" data-filter="traffic">🚦 Signals</button>
-              <button class="map-filter-btn" data-filter="critical">🚨 High Priority</button>
-              <button class="map-filter-btn" data-filter="resolved">✅ Resolved</button>
-            </div>
+            <span class="badge badge-verified" style="font-size: 0.75rem;">Interactive GIS Pin Layer</span>
           </div>
 
-          <!-- Map Legend -->
-          <div class="map-legend-overlay">
-            <div class="legend-row"><span class="legend-dot critical"></span> Critical / Overdue</div>
-            <div class="legend-row"><span class="legend-dot high"></span> High Severity</div>
-            <div class="legend-row"><span class="legend-dot medium"></span> Medium / Low</div>
-            <div class="legend-row"><span class="legend-dot resolved"></span> Citizen Verified</div>
-          </div>
+          <div class="map-view-container">
+            <!-- Floating Category & Status Filters -->
+            <div class="map-filter-overlay">
+              <div class="map-filter-header">
+                <h4><span>🔍</span> Map Filters</h4>
+              </div>
+              <div class="map-filter-chips">
+                <button class="map-filter-btn active" data-filter="all">All Issues</button>
+                <button class="map-filter-btn" data-filter="pothole">🕳️ Potholes</button>
+                <button class="map-filter-btn" data-filter="streetlight">💡 Lights</button>
+                <button class="map-filter-btn" data-filter="garbage">🗑️ Garbage</button>
+                <button class="map-filter-btn" data-filter="drainage">🌊 Drainage</button>
+                <button class="map-filter-btn" data-filter="traffic">🚦 Signals</button>
+                <button class="map-filter-btn" data-filter="critical">🚨 High Priority</button>
+                <button class="map-filter-btn" data-filter="resolved">✅ Resolved</button>
+                <button class="map-filter-btn" data-filter="reopened">🚨 Reopened</button>
+              </div>
+            </div>
 
-          <!-- Leaflet Map Container -->
-          <div id="civic-leaflet-map"></div>
+            <!-- Map Legend -->
+            <div class="map-legend-overlay">
+              <div class="legend-row"><span class="legend-dot critical"></span> Critical / Overdue</div>
+              <div class="legend-row"><span class="legend-dot high"></span> High Severity</div>
+              <div class="legend-row"><span class="legend-dot medium"></span> Medium / Low</div>
+              <div class="legend-row"><span class="legend-dot resolved"></span> Citizen Verified</div>
+              <div class="legend-row"><span class="legend-dot reopened"></span> Reopened / Escalated</div>
+            </div>
+
+            <!-- Leaflet Map Container -->
+            <div id="civic-leaflet-map"></div>
+          </div>
         </div>
       </section>
 
@@ -769,17 +878,26 @@
            VIEW 6: PUBLIC TRANSPARENCY DASHBOARD
            ==================================================================== -->
       <section id="view-public-dashboard" class="spa-view">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
           <div>
             <h2 style="font-size: 1.8rem; font-weight: 800;" data-i18n="nav_public">Public Transparency Dashboard</h2>
             <p style="color: var(--text-secondary);">Open civic metrics, SLA resolution rates, and department performance rankings.</p>
           </div>
-          <span class="badge badge-verified" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
-            🟢 LIVE OPEN CIVIC DATA
-          </span>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span class="prototype-disclaimer-pill">Prototype Data Stream</span>
+            <span class="badge badge-verified" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+              🟢 OPEN CIVIC DATA
+            </span>
+          </div>
         </div>
 
-        <!-- Transparency High-Level KPIs -->
+        <!-- Prototype Data Notice Banner -->
+        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-left: 4px solid var(--brand-primary); padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; font-size: 0.82rem; color: var(--text-secondary); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+          <span>📋 <strong>Transparency Disclaimer:</strong> Metrics aggregated from real-time local prototype complaint data and simulated Chennai ward workloads.</span>
+          <span style="font-weight: 600; color: var(--brand-primary);">Updated live on ground action</span>
+        </div>
+
+        <!-- Transparency High-Level KPIs Grid -->
         <div class="transparency-kpi-row">
           <div class="transparency-kpi">
             <div id="pub-total-complaints" class="transparency-kpi-val">1,284</div>
@@ -794,16 +912,24 @@
             <div class="transparency-kpi-title" data-i18n="stat_pending">PENDING</div>
           </div>
           <div class="transparency-kpi">
+            <div id="pub-reopened-complaints" class="transparency-kpi-val" style="color: #ef4444;">18</div>
+            <div class="transparency-kpi-title">REOPENED / ESCALATED</div>
+          </div>
+          <div class="transparency-kpi">
+            <div id="pub-high-priority-complaints" class="transparency-kpi-val" style="color: #f97316;">75</div>
+            <div class="transparency-kpi-title">HIGH PRIORITY</div>
+          </div>
+          <div class="transparency-kpi">
             <div id="pub-resolution-rate" class="transparency-kpi-val" style="color: #0284c7;">73.7%</div>
             <div class="transparency-kpi-title" data-i18n="stat_resolution_rate">RESOLUTION RATE</div>
           </div>
           <div class="transparency-kpi">
-            <div id="pub-avg-days" class="transparency-kpi-val">2.4 days</div>
-            <div class="transparency-kpi-title" data-i18n="stat_avg_time">AVG RESOLUTION TIME</div>
-          </div>
-          <div class="transparency-kpi">
             <div id="pub-citizen-verify-rate" class="transparency-kpi-val" style="color: #059669;">88.4%</div>
             <div class="transparency-kpi-title">CITIZEN VERIFY RATE</div>
+          </div>
+          <div class="transparency-kpi">
+            <div id="pub-avg-days" class="transparency-kpi-val">2.4 days</div>
+            <div class="transparency-kpi-title" data-i18n="stat_avg_time">AVG RESOLUTION TIME</div>
           </div>
         </div>
 
@@ -1136,6 +1262,47 @@
         <div style="display: flex; gap: 0.75rem; justify-content: center;">
           <button id="success-view-details-btn" class="btn btn-primary" style="flex: 1;">
             View Timeline & Track Progress &rarr;
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reopen Complaint Feedback & Escalation Modal -->
+  <div id="reopen-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="reopen-modal-title">
+    <div class="modal-dialog">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 1.25rem 1.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <span style="font-size: 1.6rem;">🚨</span>
+          <div>
+            <h3 id="reopen-modal-title" style="font-size: 1.2rem; font-weight: 800; color: #ef4444; margin: 0;">Reopen Complaint & Escalate</h3>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">Citizen Accountability Verification</p>
+          </div>
+        </div>
+        <button type="button" class="btn-icon" onclick="ComplaintsController.closeReopenModal()" aria-label="Close dialog">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <div style="background: #fee2e2; border: 1px solid #fca5a5; border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 1.25rem; font-size: 0.85rem; color: #991b1b; line-height: 1.4;">
+          <strong>Official Accountability Notice:</strong> Rejecting the reported resolution marks this case as <strong>REOPENED</strong>, elevates priority score, and routes an escalation alert to the Zonal Superintending Engineer.
+        </div>
+        
+        <label class="form-label" style="font-weight: 700; margin-bottom: 0.4rem;">Select Reason / Quick Feedback Tag:</label>
+        <div class="reopen-preset-tags" style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem;">
+          <button type="button" class="btn btn-sm btn-secondary reopen-tag-btn" onclick="ComplaintsController.setReopenReason('Work not done at all; problem remains active on ground.')">Work not done</button>
+          <button type="button" class="btn btn-sm btn-secondary reopen-tag-btn" onclick="ComplaintsController.setReopenReason('Temporary patch eroded within hours; hazard still present.')">Temporary patch failed</button>
+          <button type="button" class="btn btn-sm btn-secondary reopen-tag-btn" onclick="ComplaintsController.setReopenReason('Only partial clearance completed; debris/overflow blocking path.')">Partial clearance only</button>
+          <button type="button" class="btn btn-sm btn-secondary reopen-tag-btn" onclick="ComplaintsController.setReopenReason('Contractor marked wrong location resolved.')">Wrong location marked</button>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+          <label for="reopen-reason-textarea" class="form-label">Detailed Citizen Verification Feedback <span style="color: #ef4444;">*</span></label>
+          <textarea id="reopen-reason-textarea" rows="3" placeholder="Explain specifically why the problem still exists on-ground..." style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.75rem; font-family: inherit; font-size: 0.88rem; background: var(--bg-card); color: var(--text-primary);"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="ComplaintsController.closeReopenModal()">Cancel</button>
+          <button type="button" id="btn-confirm-reopen" class="btn btn-danger" onclick="ComplaintsController.submitReopen()">
+            🚨 Confirm Reopen & Escalate
           </button>
         </div>
       </div>

@@ -273,27 +273,82 @@ const ComplaintsController = {
   async handleCitizenVerification(isFixed) {
     if (!this.currentDetailComplaintId) return;
 
-    let reason = '';
     if (!isFixed) {
-      reason = prompt('Please specify why the issue is not fixed (e.g., "Pothole was only filled with loose sand and eroded again"):', 'Pothole was not patched properly, still exists on ground.');
-      if (reason === null) return; // user cancelled prompt
+      this.openReopenModal();
+      return;
     }
 
-    const res = await ApiService.verifyCitizenResolution(this.currentDetailComplaintId, isFixed, reason);
+    const res = await ApiService.verifyCitizenResolution(this.currentDetailComplaintId, true, 'Citizen verified problem resolved on-ground.');
     if (res.success) {
-      if (isFixed) {
-        NotificationService.showToast({
-          title: 'Citizen Verification Confirmed',
-          message: 'Thank you! Complaint marked CITIZEN VERIFIED and closed.',
-          type: 'success'
-        });
-      } else {
-        NotificationService.showToast({
-          title: 'Complaint REOPENED',
-          message: 'Thank you. The issue has been reopened for immediate escalation.',
-          type: 'danger'
-        });
-      }
+      NotificationService.showToast({
+        title: 'Citizen Verification Confirmed',
+        message: 'Thank you! Complaint marked CITIZEN VERIFIED and officially closed.',
+        type: 'success',
+        complaintId: this.currentDetailComplaintId
+      });
+
+      // Re-render details view
+      this.renderComplaintDetails(this.currentDetailComplaintId);
+    }
+  },
+
+  openReopenModal() {
+    const modal = document.getElementById('reopen-modal');
+    const textarea = document.getElementById('reopen-reason-textarea');
+    if (textarea) textarea.value = 'Problem was not properly fixed on ground; civic hazard still exists.';
+    if (modal) modal.classList.add('open');
+  },
+
+  closeReopenModal() {
+    const modal = document.getElementById('reopen-modal');
+    if (modal) modal.classList.remove('open');
+  },
+
+  setReopenReason(reason) {
+    const textarea = document.getElementById('reopen-reason-textarea');
+    if (textarea) {
+      textarea.value = reason;
+      textarea.focus();
+    }
+  },
+
+  async submitReopen() {
+    if (!this.currentDetailComplaintId) return;
+    const textarea = document.getElementById('reopen-reason-textarea');
+    const reason = textarea ? textarea.value.trim() : '';
+
+    if (!reason) {
+      NotificationService.showToast({
+        title: 'Feedback Required',
+        message: 'Please provide feedback explaining why the issue is not resolved.',
+        type: 'warning'
+      });
+      if (textarea) textarea.focus();
+      return;
+    }
+
+    const confirmBtn = document.getElementById('btn-confirm-reopen');
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Escalating Case...';
+    }
+
+    const res = await ApiService.verifyCitizenResolution(this.currentDetailComplaintId, false, reason);
+    
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = '🚨 Confirm Reopen & Escalate';
+    }
+
+    this.closeReopenModal();
+
+    if (res.success) {
+      NotificationService.showToast({
+        title: 'Complaint REOPENED & Escalated',
+        message: 'Citizen rejection logged. Priority elevated and escalation ticket dispatched to Zonal Superintending Engineer.',
+        type: 'danger',
+        complaintId: this.currentDetailComplaintId
+      });
 
       // Re-render details view
       this.renderComplaintDetails(this.currentDetailComplaintId);

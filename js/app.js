@@ -200,5 +200,23 @@ document.addEventListener('DOMContentLoaded', () => {
   // Start SPA Router
   AppRouter.init();
 
+  // Global modal backdrop click & ESC key handlers for accessibility
+  document.querySelectorAll('.modal-backdrop').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('open');
+      }
+    });
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-backdrop.open').forEach(modal => {
+        modal.classList.remove('open');
+      });
+    }
+  });
+
   console.log('CivicTrack AI initialized successfully in Hackathon Prototype Mode.');
 });
+

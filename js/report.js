@@ -53,6 +53,10 @@ const ReportController = {
       fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
+          if (!this.validateImageFile(file)) {
+            fileInput.value = '';
+            return;
+          }
           const reader = new FileReader();
           reader.onload = (event) => {
             this.handleImageSelected(event.target.result);
@@ -76,7 +80,8 @@ const ReportController = {
         e.preventDefault();
         dropzone.classList.remove('drag-over');
         const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('image/')) {
+        if (file) {
+          if (!this.validateImageFile(file)) return;
           const reader = new FileReader();
           reader.onload = (event) => {
             this.handleImageSelected(event.target.result);
@@ -101,6 +106,56 @@ const ReportController = {
         this.handleImageSelected(imgPath);
       });
     });
+  },
+
+  validateImageFile(file) {
+    if (!file) return false;
+    
+    // File size check: Max 10MB
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      NotificationService.showToast({
+        title: 'File Too Large',
+        message: 'The selected image is larger than 10MB. Please choose a photo under 10MB.',
+        type: 'warning'
+      });
+      return false;
+    }
+
+    // Supported formats
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(jpg|jpeg|png|webp|svg)$/i)) {
+      NotificationService.showToast({
+        title: 'Unsupported Format',
+        message: 'Please upload an image in JPG, PNG, WEBP, or SVG format.',
+        type: 'warning'
+      });
+      return false;
+    }
+
+    return true;
+  },
+
+  scrollToStep(stepNum) {
+    const el = document.getElementById(`report-step-${stepNum}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      this.updateStepProgress(stepNum);
+    }
+  },
+
+  updateStepProgress(currentStep) {
+    for (let i = 1; i <= 4; i++) {
+      const node = document.getElementById(`report-step-nav-${i}`);
+      if (!node) continue;
+      if (i < currentStep) {
+        node.className = 'report-step-node completed';
+      } else if (i === currentStep) {
+        node.className = 'report-step-node active';
+      } else {
+        node.className = 'report-step-node';
+      }
+    }
   },
 
   handleImageSelected(imageSrc) {

@@ -6,6 +6,11 @@
 const DashboardController = {
   init() {
     this.renderHomeDashboard();
+    window.addEventListener('resize', () => {
+      if (AppRouter && AppRouter.currentRoute === 'public-dashboard') {
+        this.renderPublicDashboard();
+      }
+    });
   },
 
   async renderHomeDashboard() {
@@ -26,6 +31,9 @@ const DashboardController = {
     if (elResolved) elResolved.textContent = resolved.toLocaleString();
     if (elPending) elPending.textContent = pending.toLocaleString();
     if (elCritical) elCritical.textContent = critical.toLocaleString();
+
+    // Render Live Civic Pulse
+    this.renderCivicPulse(complaints);
 
     // Verification Alert Banner (Prompt if complaints need verification)
     const verificationAlert = document.getElementById('home-verification-alert');
@@ -48,6 +56,95 @@ const DashboardController = {
 
     // Render Recent Activity Stream
     this.renderRecentActivity(complaints);
+  },
+
+  renderCivicPulse(complaints) {
+    if (!complaints || complaints.length === 0) return;
+
+    const total = complaints.length;
+    const resolved = complaints.filter(c => ['RESOLVED', 'CITIZEN VERIFIED'].includes(c.status)).length;
+    const inProgress = complaints.filter(c => ['IN PROGRESS', 'ASSIGNED'].includes(c.status)).length;
+    const reopened = complaints.filter(c => c.status === 'REOPENED').length;
+    const submitted = complaints.filter(c => ['SUBMITTED', 'VERIFIED'].includes(c.status)).length;
+
+    const resPct = Math.round((resolved / total) * 100);
+    const inProgPct = Math.round((inProgress / total) * 100);
+    const reopPct = Math.round((reopened / total) * 100);
+    const subPct = Math.max(0, 100 - resPct - inProgPct - reopPct);
+
+    const segRes = document.getElementById('pulse-segment-resolved');
+    const segInProg = document.getElementById('pulse-segment-inprogress');
+    const segReop = document.getElementById('pulse-segment-reopened');
+    const segSub = document.getElementById('pulse-segment-submitted');
+
+    if (segRes) segRes.style.width = `${resPct}%`;
+    if (segInProg) segInProg.style.width = `${inProgPct}%`;
+    if (segReop) segReop.style.width = `${reopPct}%`;
+    if (segSub) segSub.style.width = `${subPct}%`;
+
+    const countRes = document.getElementById('pulse-count-resolved');
+    const countInProg = document.getElementById('pulse-count-inprogress');
+    const countReop = document.getElementById('pulse-count-reopened');
+    const countSub = document.getElementById('pulse-count-submitted');
+    const pctLabel = document.getElementById('pulse-resolution-percentage');
+
+    if (countRes) countRes.textContent = resolved;
+    if (countInProg) countInProg.textContent = inProgress;
+    if (countReop) countReop.textContent = reopened;
+    if (countSub) countSub.textContent = submitted;
+    if (pctLabel) pctLabel.textContent = `${resPct}% Resolved & Verified`;
+
+    // Dynamic category breakdown list
+    const catList = document.getElementById('dashboard-category-pulse-list');
+    if (catList) {
+      const countsByCategory = {};
+      const categoryMeta = {};
+
+      complaints.forEach(c => {
+        const cat = c.category || 'other';
+        countsByCategory[cat] = (countsByCategory[cat] || 0) + 1;
+        if (!categoryMeta[cat]) {
+          categoryMeta[cat] = {
+            name: c.categoryName || cat,
+            icon: c.categoryIcon || '📌'
+          };
+        }
+      });
+
+      const sortedCats = Object.keys(countsByCategory).sort((a, b) => countsByCategory[b] - countsByCategory[a]);
+      const maxCount = Math.max(...Object.values(countsByCategory), 1);
+
+      const colorMap = {
+        pothole: '#f97316',
+        streetlight: '#eab308',
+        garbage: '#84cc16',
+        drainage: '#06b6d4',
+        traffic: '#ef4444',
+        road_damage: '#3b82f6',
+        property_damage: '#10b981'
+      };
+
+      catList.innerHTML = sortedCats.map(cat => {
+        const count = countsByCategory[cat];
+        const meta = categoryMeta[cat];
+        const pct = Math.round((count / maxCount) * 100);
+        const barColor = colorMap[cat] || 'var(--brand-primary)';
+
+        return `
+          <div class="category-pulse-row">
+            <span style="min-width: 140px; font-weight: 600; display: flex; align-items: center; gap: 0.35rem;">
+              <span>${meta.icon}</span> <span>${meta.name}</span>
+            </span>
+            <div class="category-pulse-bar-wrapper">
+              <div class="category-pulse-bar-fill" style="width: ${pct}%; background: ${barColor};"></div>
+            </div>
+            <span style="font-weight: 700; min-width: 55px; text-align: right; color: var(--text-primary);">
+              ${count} ${count === 1 ? 'case' : 'cases'}
+            </span>
+          </div>
+        `;
+      }).join('');
+    }
   },
 
   renderRecentActivity(complaints) {
@@ -101,13 +198,32 @@ const DashboardController = {
     const statsRes = await ApiService.getPublicStats();
     const stats = statsRes.stats;
 
+    const baseTotal = 1284 + stats.total - 10;
+    const baseResolved = 947 + stats.resolved - 4;
+    const basePending = 337 + stats.pending - 6;
+    const baseReopened = 18 + stats.reopened - 1;
+    const baseHighPriority = 75 + stats.highPriority - 5;
+    const rate = ((baseResolved / baseTotal) * 100).toFixed(1);
+    const verifyRate = baseResolved > 0 ? (((baseResolved - baseReopened) / baseResolved) * 100).toFixed(1) : '88.4';
+
     // Update KPI metrics
-    document.getElementById('pub-total-complaints').textContent = (1284).toLocaleString();
-    document.getElementById('pub-resolved-complaints').textContent = (947).toLocaleString();
-    document.getElementById('pub-pending-complaints').textContent = (337).toLocaleString();
-    document.getElementById('pub-resolution-rate').textContent = '73.7%';
-    document.getElementById('pub-avg-days').textContent = '2.4 days';
-    document.getElementById('pub-citizen-verify-rate').textContent = '88.4%';
+    const elTot = document.getElementById('pub-total-complaints');
+    const elRes = document.getElementById('pub-resolved-complaints');
+    const elPen = document.getElementById('pub-pending-complaints');
+    const elReop = document.getElementById('pub-reopened-complaints');
+    const elHigh = document.getElementById('pub-high-priority-complaints');
+    const elRate = document.getElementById('pub-resolution-rate');
+    const elDays = document.getElementById('pub-avg-days');
+    const elVer = document.getElementById('pub-citizen-verify-rate');
+
+    if (elTot) elTot.textContent = baseTotal.toLocaleString();
+    if (elRes) elRes.textContent = baseResolved.toLocaleString();
+    if (elPen) elPen.textContent = basePending.toLocaleString();
+    if (elReop) elReop.textContent = baseReopened.toLocaleString();
+    if (elHigh) elHigh.textContent = baseHighPriority.toLocaleString();
+    if (elRate) elRate.textContent = `${rate}%`;
+    if (elDays) elDays.textContent = '2.4 days';
+    if (elVer) elVer.textContent = `${verifyRate}%`;
 
     // Draw Pure HTML5 Canvas Charts
     setTimeout(() => {

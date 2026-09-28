@@ -69,7 +69,17 @@ const I18N_TRANSLATIONS = {
     // Verification
     verify_heading: 'Has this problem actually been fixed?',
     verify_sub: 'Citizen verification prevents false closures. Your confirmation holds civic contractors accountable.',
-    reopened_notice: 'Thank you. The issue has been reopened for immediate supervisor escalation.'
+    reopened_notice: 'Thank you. The issue has been reopened for immediate supervisor escalation.',
+
+    // Pulse & Steps & Google Maps
+    pulse_title: 'Live Civic Health & Resolution Pulse',
+    pulse_subtitle: 'Real-time SLA status and category distribution computed from active citizen complaints.',
+    step_1_title: 'Category',
+    step_2_title: 'Evidence & AI',
+    step_3_title: 'Location',
+    step_4_title: 'Details',
+    gmaps_title: 'Google Maps — Explore Civic Location',
+    gmaps_sub: 'Explore the surrounding area and geographic context using Google Maps.'
   },
 
   ta: {
@@ -137,7 +147,17 @@ const I18N_TRANSLATIONS = {
     // Verification
     verify_heading: 'இந்த பிரச்சனை உண்மையில் சரிசெய்யப்பட்டுவிட்டதா?',
     verify_sub: 'போலி தீர்வுகளைத் தடுக்க பொதுமக்கள் சரிபார்ப்பு அவசியம். உங்கள் உறுதிப்படுத்தல் அரசு அதிகாரிகளைப் பொறுப்பேற்க வைக்கும்.',
-    reopened_notice: 'நன்றி. உங்கள் புகார் மீண்டும் திறக்கப்பட்டு உயர் அதிகாரிகளுக்குப் பரிந்துரைக்கப்பட்டுள்ளது.'
+    reopened_notice: 'நன்றி. உங்கள் புகார் மீண்டும் திறக்கப்பட்டு உயர் அதிகாரிகளுக்குப் பரிந்துரைக்கப்பட்டுள்ளது.',
+
+    // Pulse & Steps & Google Maps
+    pulse_title: 'நகர நலன் & தீர்வு நேரலை நிலவரம்',
+    pulse_subtitle: 'பொதுமக்கள் புகார்களின் நேரடி தீர்வு நிலை மற்றும் பிரிவு வாரியான புள்ளிவிவரம்.',
+    step_1_title: 'பிரிவு',
+    step_2_title: 'சான்று & AI',
+    step_3_title: 'இருப்பிடம்',
+    step_4_title: 'விவரங்கள்',
+    gmaps_title: 'கூகுள் வரைபடம் — பகுதி ஆய்வு',
+    gmaps_sub: 'கூகுள் வரைபடத்தைப் பயன்படுத்தி சுற்றியுள்ள பகுதிகள் மற்றும் முக்கிய இடங்களை ஆராயுங்கள்.'
   }
 };
 
