@@ -134,8 +134,12 @@ const ComplaintsController = {
   async renderComplaintDetails(id) {
     this.currentDetailComplaintId = id;
     const res = await ApiService.getComplaintById(id);
-    if (!res.success) {
-      NotificationService.showToast({ title: 'Error', message: 'Complaint not found', type: 'danger' });
+    if (!res || !res.success) {
+      NotificationService.showToast({
+        title: 'Complaint Not Found',
+        message: (res && res.error) || `Complaint with ID "${id}" could not be found.`,
+        type: 'danger'
+      });
       AppRouter.navigate('complaints');
       return;
     }
@@ -279,7 +283,7 @@ const ComplaintsController = {
     }
 
     const res = await ApiService.verifyCitizenResolution(this.currentDetailComplaintId, true, 'Citizen verified problem resolved on-ground.');
-    if (res.success) {
+    if (res && res.success) {
       NotificationService.showToast({
         title: 'Citizen Verification Confirmed',
         message: 'Thank you! Complaint marked CITIZEN VERIFIED and officially closed.',
@@ -289,6 +293,12 @@ const ComplaintsController = {
 
       // Re-render details view
       this.renderComplaintDetails(this.currentDetailComplaintId);
+    } else {
+      NotificationService.showToast({
+        title: 'Verification Failed',
+        message: (res && res.error) || 'Failed to verify resolution. Please try again.',
+        type: 'danger'
+      });
     }
   },
 
@@ -312,6 +322,12 @@ const ComplaintsController = {
     }
   },
 
+  /**
+   * Submit Complaint Reopen & Escalation
+   * Invoked when citizen verifies on-ground that reported issue was NOT fixed.
+   * Mandates feedback reason, calls ApiService.verifyCitizenResolution(false),
+   * sets escalation alert flag, boosts priority score, and notifies authorities.
+   */
   async submitReopen() {
     if (!this.currentDetailComplaintId) return;
     const textarea = document.getElementById('reopen-reason-textarea');
@@ -333,25 +349,39 @@ const ComplaintsController = {
       confirmBtn.textContent = 'Escalating Case...';
     }
 
-    const res = await ApiService.verifyCitizenResolution(this.currentDetailComplaintId, false, reason);
-    
-    if (confirmBtn) {
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = '🚨 Confirm Reopen & Escalate';
-    }
+    try {
+      const res = await ApiService.verifyCitizenResolution(this.currentDetailComplaintId, false, reason);
+      this.closeReopenModal();
 
-    this.closeReopenModal();
+      if (res && res.success) {
+        NotificationService.showToast({
+          title: 'Complaint REOPENED & Escalated',
+          message: 'Citizen rejection logged. Priority elevated and escalation ticket dispatched to Zonal Superintending Engineer.',
+          type: 'danger',
+          complaintId: this.currentDetailComplaintId
+        });
 
-    if (res.success) {
+        // Re-render details view
+        this.renderComplaintDetails(this.currentDetailComplaintId);
+      } else {
+        NotificationService.showToast({
+          title: 'Escalation Failed',
+          message: (res && res.error) || 'Could not escalate complaint. Please try again.',
+          type: 'danger'
+        });
+      }
+    } catch (err) {
+      console.error('[ComplaintsController.submitReopen] Error:', err);
       NotificationService.showToast({
-        title: 'Complaint REOPENED & Escalated',
-        message: 'Citizen rejection logged. Priority elevated and escalation ticket dispatched to Zonal Superintending Engineer.',
-        type: 'danger',
-        complaintId: this.currentDetailComplaintId
+        title: 'Unexpected Error',
+        message: 'An error occurred while reopening: ' + err.message,
+        type: 'danger'
       });
-
-      // Re-render details view
-      this.renderComplaintDetails(this.currentDetailComplaintId);
+    } finally {
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = '🚨 Confirm Reopen & Escalate';
+      }
     }
   },
 

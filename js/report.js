@@ -61,6 +61,14 @@ const ReportController = {
           reader.onload = (event) => {
             this.handleImageSelected(event.target.result);
           };
+          reader.onerror = (err) => {
+            console.error('[ReportController] FileReader error:', err);
+            NotificationService.showToast({
+              title: 'File Read Error',
+              message: 'Failed to read the selected file. Please select a valid photo.',
+              type: 'danger'
+            });
+          };
           reader.readAsDataURL(file);
         }
       });
@@ -85,6 +93,14 @@ const ReportController = {
           const reader = new FileReader();
           reader.onload = (event) => {
             this.handleImageSelected(event.target.result);
+          };
+          reader.onerror = (err) => {
+            console.error('[ReportController] FileReader error:', err);
+            NotificationService.showToast({
+              title: 'File Read Error',
+              message: 'Failed to read the selected file. Please select a valid photo.',
+              type: 'danger'
+            });
           };
           reader.readAsDataURL(file);
         }
@@ -311,11 +327,19 @@ const ReportController = {
         this.updateSmartSummary();
       },
       (error) => {
-        console.warn('GPS Permission Denied or Timeout:', error.message);
-        if (statusText) statusText.textContent = 'GPS permission denied. Using manual fallback location.';
+        console.warn('[ReportController] GPS Error:', error.code, error.message);
+        let errorMsg = 'Location permission is required for high-accuracy GPS geotagging. Fallback manual location enabled.';
+        if (error.code === 1) { // PERMISSION_DENIED
+          errorMsg = 'GPS location permission was denied. You can manually enter or pick a preset location.';
+        } else if (error.code === 2) { // POSITION_UNAVAILABLE
+          errorMsg = 'GPS satellite signal unavailable. Defaulting to Anna Nagar landmark coordinates.';
+        } else if (error.code === 3) { // TIMEOUT
+          errorMsg = 'GPS location request timed out. Using fallback landmark coordinates.';
+        }
+        if (statusText) statusText.textContent = 'GPS offline / denied. Using manual fallback location.';
         NotificationService.showToast({
-          title: 'Location Permission Denied',
-          message: 'Location permission is required for accurate civic reporting. Fallback manual location enabled.',
+          title: 'Location Notice',
+          message: errorMsg,
           type: 'warning'
         });
       },
@@ -446,6 +470,11 @@ const ReportController = {
     }
   },
 
+  /**
+   * Bind Report Form Submission
+   * Validates citizen input, triggers AI priority scoring, invokes ApiService.createComplaint,
+   * handles failure scenarios with error toasts, and displays the success modal upon resolution.
+   */
   bindFormSubmission() {
     const form = document.getElementById('civic-report-form');
     if (!form) return;
@@ -457,10 +486,32 @@ const ReportController = {
       const descInput = document.getElementById('report-desc-input');
       const locationInput = document.getElementById('report-location-input');
 
-      const title = titleInput && titleInput.value.trim() ? titleInput.value.trim() : 
-        `${this.selectedCategoryName} reported at ${this.currentAddress}`;
-      const description = descInput ? descInput.value.trim() : '';
       const location = locationInput && locationInput.value.trim() ? locationInput.value.trim() : this.currentAddress;
+      
+      // User input validation: Ensure location is non-empty
+      if (!location || location.trim().length < 3) {
+        NotificationService.showToast({
+          title: 'Location Required',
+          message: 'Please provide a valid street address or landmark for the civic report.',
+          type: 'warning'
+        });
+        if (locationInput) locationInput.focus();
+        return;
+      }
+
+      // Ensure category is selected
+      if (!this.selectedCategory) {
+        NotificationService.showToast({
+          title: 'Category Required',
+          message: 'Please select an issue category (e.g., Pothole, Streetlight, Drainage).',
+          type: 'warning'
+        });
+        return;
+      }
+
+      const title = titleInput && titleInput.value.trim() ? titleInput.value.trim() : 
+        `${this.selectedCategoryName} reported at ${location}`;
+      const description = descInput ? descInput.value.trim() : '';
 
       const severity = this.aiAnalysisResult ? this.aiAnalysisResult.severity : 'HIGH';
       const department = this.aiAnalysisResult ? this.aiAnalysisResult.department : 'Greater Chennai Corporation';
@@ -478,30 +529,47 @@ const ReportController = {
         submitBtn.innerHTML = 'Submitting & Routing...';
       }
 
-      const res = await ApiService.createComplaint({
-        category: this.selectedCategory,
-        categoryName: this.selectedCategoryName,
-        categoryIcon: this.selectedCategoryIcon,
-        title,
-        description,
-        location,
-        coordinates: this.currentCoordinates,
-        severity,
-        priorityScore,
-        estimatedImpact: impact,
-        recommendedDepartment: department,
-        imageUrl: this.currentImageSrc || 'assets/sample-pothole.svg',
-        confidence: this.aiAnalysisResult ? this.aiAnalysisResult.confidence : 92
-      });
+      try {
+        const res = await ApiService.createComplaint({
+          category: this.selectedCategory,
+          categoryName: this.selectedCategoryName,
+          categoryIcon: this.selectedCategoryIcon,
+          title,
+          description,
+          location,
+          coordinates: this.currentCoordinates,
+          severity,
+          priorityScore,
+          estimatedImpact: impact,
+          recommendedDepartment: department,
+          imageUrl: this.currentImageSrc || 'assets/sample-pothole.svg',
+          confidence: this.aiAnalysisResult ? this.aiAnalysisResult.confidence : 92
+        });
 
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = 'Submit Complaint';
-      }
-
-      if (res.success) {
-        // Show Success Modal
-        this.showSuccessModal(res.data);
+        if (res && res.success) {
+          // Show Success Modal
+          this.showSuccessModal(res.data);
+        } else {
+          // Display structured failure error
+          NotificationService.showToast({
+            title: 'Submission Failed',
+            message: (res && res.error) || 'Failed to submit complaint. Please check your inputs and try again.',
+            type: 'danger'
+          });
+        }
+      } catch (err) {
+        console.error('[ReportController.submit] Unexpected submission error:', err);
+        NotificationService.showToast({
+          title: 'Unexpected Error',
+          message: 'An unexpected error occurred while submitting. ' + err.message,
+          type: 'danger'
+        });
+      } finally {
+        // Guaranteed restoration of button state in finally block
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = 'Submit Complaint';
+        }
       }
     });
   },

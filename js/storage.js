@@ -1,7 +1,33 @@
 /**
- * CivicTrack AI - Storage Layer (storage.js)
- * Clean data abstraction wrapping browser localStorage.
- * Structured so it can be seamlessly swapped with Python REST API & PostgreSQL.
+ * CivicTrack AI - Data Storage Layer (storage.js)
+ * 
+ * Architecture Overview:
+ * ----------------------
+ * CivicTrack AI uses a decoupled client-side persistence architecture.
+ * Browser localStorage provides zero-dependency, instant offline-friendly storage for
+ * the civic accountability platform. All data operations are encapsulated within StorageService,
+ * which acts as a clean Data Access Object (DAO) / Repository pattern.
+ * 
+ * Storage Key Namespace Strategy:
+ * -------------------------------
+ * All keys are versioned with a '_v1' suffix (e.g., 'civictrack_complaints_v1') to:
+ * 1. Prevent collision with other applications running on the same domain/origin.
+ * 2. Enable schema migrations in future project reviews without breaking legacy data.
+ * 
+ * Persistence Model & Data Schema:
+ * --------------------------------
+ * - Complaints: Array<Complaint> (Structured records with 6-stage lifecycle tracking)
+ * - Notifications: Array<Notification> (User alerts for status updates & verification)
+ * - UserProfile: Object (Citizen contact details, ward assignment, preferences)
+ * - Settings: Object (App configurations: language, theme, GPS permissions)
+ * - Initialized: Boolean sentinel flag to load demo data on first application visit
+ * 
+ * Storage Limitations & Technical Trade-offs:
+ * -------------------------------------------
+ * 1. Quota Constraints: localStorage is typically capped at ~5-10 MB per origin.
+ * 2. Synchronous Blocking: JSON.stringify/JSON.parse execute on the main UI thread.
+ * 3. Domain Isolation: Data is local to the specific browser and device profile.
+ * 4. Production Roadmap: In Review 3, this layer will be replaced with PostgreSQL + REST API.
  */
 
 const STORAGE_KEYS = {
@@ -587,52 +613,130 @@ const DEFAULT_SETTINGS = {
  * Storage Service API Layer
  */
 const StorageService = {
-  // Initialize storage with demo data if first run
+  /**
+   * Tracks the most recent storage error encountered (e.g., QuotaExceededError)
+   * Useful for UI error diagnostics and automated testing.
+   * @type {Error|null}
+   */
+  lastError: null,
+
+  /**
+   * Initialize browser storage with realistic demo records on first visit.
+   * Checks for the sentinel key 'civictrack_initialized_v1'. If not found,
+   * populates initial complaints, notifications, profile, and settings.
+   */
   init() {
-    if (!localStorage.getItem(STORAGE_KEYS.INITIALIZED)) {
-      this.resetDemoData();
-      localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
+    try {
+      if (typeof localStorage === 'undefined') {
+        console.warn('[StorageService.init] localStorage is unavailable in this environment.');
+        return;
+      }
+      if (!localStorage.getItem(STORAGE_KEYS.INITIALIZED)) {
+        this.resetDemoData();
+        localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
+      }
+    } catch (e) {
+      this.lastError = e;
+      console.error('[StorageService.init] Storage initialization failed:', e);
     }
   },
 
-  // Get all complaints
+  /**
+   * Retrieve all stored complaints.
+   * Gracefully handles corrupted JSON data or storage access errors by falling back
+   * to DEFAULT_COMPLAINTS so the application UI never crashes.
+   * 
+   * @returns {Array<Object>} List of complaint objects
+   */
   getComplaints() {
     try {
+      if (typeof localStorage === 'undefined') return DEFAULT_COMPLAINTS;
       const data = localStorage.getItem(STORAGE_KEYS.COMPLAINTS);
-      return data ? JSON.parse(data) : DEFAULT_COMPLAINTS;
+      if (!data) return DEFAULT_COMPLAINTS;
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : DEFAULT_COMPLAINTS;
     } catch (e) {
-      console.error('Failed to load complaints from localStorage', e);
+      this.lastError = e;
+      console.error('[StorageService.getComplaints] Failed to load/parse complaints from localStorage:', e);
       return DEFAULT_COMPLAINTS;
     }
   },
 
-  // Save complaints array
+  /**
+   * Persist complaints array to localStorage.
+   * Detects QuotaExceededError and provides structured error handling.
+   * 
+   * @param {Array<Object>} complaints - Array of complaint objects to save
+   * @returns {boolean} True if save succeeded, false on failure/quota exceeded
+   */
   saveComplaints(complaints) {
+    if (!Array.isArray(complaints)) {
+      console.error('[StorageService.saveComplaints] Expected array, received:', typeof complaints);
+      return false;
+    }
     try {
+      if (typeof localStorage === 'undefined') return false;
       localStorage.setItem(STORAGE_KEYS.COMPLAINTS, JSON.stringify(complaints));
+      this.lastError = null;
+      return true;
     } catch (e) {
-      console.error('Failed to save complaints', e);
+      this.lastError = e;
+      console.error('[StorageService.saveComplaints] Failed to save complaints:', e);
+      if (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) {
+        console.warn('[StorageService] Storage quota exceeded. Consider clearing sample images.');
+      }
+      return false;
     }
   },
 
-  // Get single complaint by ID
+  /**
+   * Retrieve a single complaint record by its unique ID.
+   * Performs defensive input validation against invalid/empty IDs.
+   * 
+   * @param {string} id - Complaint ID (e.g., 'CT-2026-001284')
+   * @returns {Object|null} Matching complaint object or null if not found
+   */
   getComplaintById(id) {
+    if (!id || typeof id !== 'string') return null;
     const list = this.getComplaints();
-    return list.find(c => c.id === id) || null;
+    return list.find(c => c && c.id === id) || null;
   },
 
-  // Add new complaint
+  /**
+   * Add a new complaint to the top of the complaints list.
+   * Unshifts the new complaint for immediate chronological display in dashboards.
+   * 
+   * @param {Object} newComplaint - Fully formed complaint object
+   * @throws {Error} If complaint is missing required ID or persistence fails
+   * @returns {Object} The newly added complaint object
+   */
   addComplaint(newComplaint) {
+    if (!newComplaint || typeof newComplaint !== 'object' || !newComplaint.id) {
+      throw new Error('Invalid complaint record: ID is required for storage.');
+    }
     const list = this.getComplaints();
     list.unshift(newComplaint);
-    this.saveComplaints(list);
+    const saved = this.saveComplaints(list);
+    if (!saved) {
+      throw new Error('Failed to persist complaint to browser storage (quota exceeded or storage disabled).');
+    }
     return newComplaint;
   },
 
-  // Update existing complaint
+  /**
+   * Partially update an existing complaint record.
+   * Merges existing attributes with updates and stamps updatedAt ISO timestamp.
+   * 
+   * @param {string} id - Unique complaint ID
+   * @param {Object} updates - Fields to overwrite/merge
+   * @returns {Object|null} Updated complaint object, or null if ID not found
+   */
   updateComplaint(id, updates) {
+    if (!id || typeof id !== 'string') return null;
+    if (!updates || typeof updates !== 'object') return null;
+
     const list = this.getComplaints();
-    const index = list.findIndex(c => c.id === id);
+    const index = list.findIndex(c => c && c.id === id);
     if (index !== -1) {
       list[index] = {
         ...list[index],
@@ -645,91 +749,197 @@ const StorageService = {
     return null;
   },
 
-  // Notifications
+  /**
+   * Retrieve all user notifications.
+   * @returns {Array<Object>} List of notification items
+   */
   getNotifications() {
     try {
+      if (typeof localStorage === 'undefined') return DEFAULT_NOTIFICATIONS;
       const data = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
-      return data ? JSON.parse(data) : DEFAULT_NOTIFICATIONS;
+      if (!data) return DEFAULT_NOTIFICATIONS;
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : DEFAULT_NOTIFICATIONS;
     } catch (e) {
+      this.lastError = e;
       return DEFAULT_NOTIFICATIONS;
     }
   },
 
+  /**
+   * Save notifications array to storage.
+   * @param {Array<Object>} notifications
+   * @returns {boolean} True if write succeeded
+   */
   saveNotifications(notifications) {
-    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
+    if (!Array.isArray(notifications)) return false;
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
+      return true;
+    } catch (e) {
+      this.lastError = e;
+      console.error('[StorageService.saveNotifications] Failed to save notifications:', e);
+      return false;
+    }
   },
 
+  /**
+   * Add a new notification to the front of the list.
+   * Generates a unique notification ID and timestamp.
+   * 
+   * @param {Object} notif - Notification payload { title, message, type, complaintId }
+   * @returns {Object|null} Created notification object
+   */
   addNotification(notif) {
+    if (!notif || typeof notif !== 'object') return null;
     const list = this.getNotifications();
-    list.unshift({
-      id: 'NOTIF-' + Date.now(),
+    const newNotif = {
+      id: 'NOTIF-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
       unread: true,
       timestamp: new Date().toISOString(),
       ...notif
-    });
+    };
+    list.unshift(newNotif);
     this.saveNotifications(list);
+    return newNotif;
   },
 
+  /**
+   * Mark a specific notification as read.
+   * @param {string} id - Notification ID
+   */
   markNotificationRead(id) {
+    if (!id) return;
     const list = this.getNotifications();
-    const item = list.find(n => n.id === id);
+    const item = list.find(n => n && n.id === id);
     if (item) {
       item.unread = false;
       this.saveNotifications(list);
     }
   },
 
+  /**
+   * Mark all stored notifications as read.
+   */
   markAllNotificationsRead() {
     const list = this.getNotifications().map(n => ({ ...n, unread: false }));
     this.saveNotifications(list);
   },
 
-  // User Profile
+  /**
+   * Retrieve current user profile settings.
+   * @returns {Object} User profile data
+   */
   getProfile() {
     try {
+      if (typeof localStorage === 'undefined') return DEFAULT_PROFILE;
       const data = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
       return data ? JSON.parse(data) : DEFAULT_PROFILE;
     } catch (e) {
+      this.lastError = e;
       return DEFAULT_PROFILE;
     }
   },
 
+  /**
+   * Save user profile updates.
+   * @param {Object} profile
+   * @returns {boolean} True if saved
+   */
   saveProfile(profile) {
-    localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
+      return true;
+    } catch (e) {
+      this.lastError = e;
+      console.error('[StorageService.saveProfile] Failed to save profile:', e);
+      return false;
+    }
   },
 
-  // Settings
+  /**
+   * Retrieve application configuration settings.
+   * @returns {Object} Settings object (language, theme, gps preferences)
+   */
   getSettings() {
     try {
+      if (typeof localStorage === 'undefined') return DEFAULT_SETTINGS;
       const data = localStorage.getItem(STORAGE_KEYS.APP_SETTINGS);
       return data ? JSON.parse(data) : DEFAULT_SETTINGS;
     } catch (e) {
+      this.lastError = e;
       return DEFAULT_SETTINGS;
     }
   },
 
+  /**
+   * Save application settings to storage.
+   * @param {Object} settings
+   * @returns {boolean} True if saved
+   */
   saveSettings(settings) {
-    localStorage.setItem(STORAGE_KEYS.APP_SETTINGS, JSON.stringify(settings));
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      localStorage.setItem(STORAGE_KEYS.APP_SETTINGS, JSON.stringify(settings));
+      return true;
+    } catch (e) {
+      this.lastError = e;
+      console.error('[StorageService.saveSettings] Failed to save settings:', e);
+      return false;
+    }
   },
 
-  // Reset demo data
+  /**
+   * Restore all storage tables back to initial factory demo state.
+   * Replaces complaints, notifications, user profile, and app settings.
+   */
   resetDemoData() {
-    localStorage.setItem(STORAGE_KEYS.COMPLAINTS, JSON.stringify(DEFAULT_COMPLAINTS));
-    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(DEFAULT_NOTIFICATIONS));
-    localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(DEFAULT_PROFILE));
-    localStorage.setItem(STORAGE_KEYS.APP_SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
-    console.log('CivicTrack AI: Demo data loaded successfully.');
+    try {
+      if (typeof localStorage === 'undefined') return;
+      localStorage.setItem(STORAGE_KEYS.COMPLAINTS, JSON.stringify(DEFAULT_COMPLAINTS));
+      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(DEFAULT_NOTIFICATIONS));
+      localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(DEFAULT_PROFILE));
+      localStorage.setItem(STORAGE_KEYS.APP_SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
+      console.log('CivicTrack AI: Demo data loaded successfully.');
+    } catch (e) {
+      this.lastError = e;
+      console.error('[StorageService.resetDemoData] Reset failed:', e);
+    }
   },
 
-  // Clear all data
+  /**
+   * Completely clear all CivicTrack AI records from localStorage.
+   */
   clearAllData() {
-    localStorage.removeItem(STORAGE_KEYS.COMPLAINTS);
-    localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS);
-    localStorage.removeItem(STORAGE_KEYS.USER_PROFILE);
-    localStorage.removeItem(STORAGE_KEYS.APP_SETTINGS);
-    localStorage.removeItem(STORAGE_KEYS.INITIALIZED);
+    try {
+      if (typeof localStorage === 'undefined') return;
+      localStorage.removeItem(STORAGE_KEYS.COMPLAINTS);
+      localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS);
+      localStorage.removeItem(STORAGE_KEYS.USER_PROFILE);
+      localStorage.removeItem(STORAGE_KEYS.APP_SETTINGS);
+      localStorage.removeItem(STORAGE_KEYS.INITIALIZED);
+    } catch (e) {
+      this.lastError = e;
+      console.error('[StorageService.clearAllData] Clear failed:', e);
+    }
   }
 };
 
-// Initialize immediately on script load
-StorageService.init();
+// Safe browser auto-initialization (bypassed in Node.js unit testing environments)
+if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+  StorageService.init();
+}
+
+// Universal export for Node.js test runners & CommonJS environments
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    StorageService,
+    STORAGE_KEYS,
+    DEFAULT_COMPLAINTS,
+    DEFAULT_NOTIFICATIONS,
+    DEFAULT_PROFILE,
+    DEFAULT_SETTINGS
+  };
+}

@@ -203,3 +203,8 @@ const I18nService = {
     });
   }
 };
+
+// Universal export for Node.js unit tests
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { I18nService, I18N_TRANSLATIONS };
+}

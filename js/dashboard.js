@@ -465,3 +465,8 @@ const DashboardController = {
     });
   }
 };
+
+// Universal export for Node.js unit tests
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { DashboardController };
+}

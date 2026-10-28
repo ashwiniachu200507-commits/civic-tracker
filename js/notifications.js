@@ -35,6 +35,7 @@ const NotificationService = {
   },
 
   showToast({ title, message, type = 'info', duration = 4500, complaintId = null }) {
+    if (typeof document === 'undefined') return;
     const container = document.getElementById('toast-container');
     if (!container) return;
 
@@ -160,4 +161,9 @@ function formatTimeAgo(date) {
   if (diffSec < 3600) return `${Math.floor(diffSec / 60)} mins ago`;
   if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} hours ago`;
   return `${Math.floor(diffSec / 86400)} days ago`;
+}
+
+// Universal export for Node.js unit tests
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { NotificationService, formatTimeAgo };
 }

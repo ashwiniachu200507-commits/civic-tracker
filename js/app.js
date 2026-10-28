@@ -141,6 +141,64 @@ const ProfileController = {
 /**
  * Theme & UI Manager
  */
+/**
+ * Centralized Application Error Boundary & Telemetry Handler
+ * Traps unhandled script runtime errors and unhandled promise rejections,
+ * logs diagnostic details to the console, and displays user-friendly recovery alerts
+ * to ensure single-page application stability without full-page crashes.
+ */
+const ErrorHandler = {
+  initialized: false,
+
+  init() {
+    if (this.initialized) return;
+    this.initialized = true;
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('error', (event) => this.handleGlobalError(event));
+      window.addEventListener('unhandledrejection', (event) => this.handleUnhandledRejection(event));
+    }
+  },
+
+  handleGlobalError(event) {
+    const error = event.error || {};
+    const message = event.message || error.message || 'An unexpected client-side error occurred.';
+    const source = event.filename ? `${event.filename}:${event.lineno}:${event.colno}` : 'internal';
+
+    console.error('[CivicTrack Global Error Boundary]', {
+      message,
+      source,
+      stack: error.stack
+    });
+
+    if (typeof document !== 'undefined' && typeof NotificationService !== 'undefined' && NotificationService.showToast) {
+      NotificationService.showToast({
+        title: 'Interface Alert',
+        message: 'An unexpected interface event was intercepted. Application state remained intact.',
+        type: 'warning'
+      });
+    }
+  },
+
+  handleUnhandledRejection(event) {
+    const reason = event.reason || {};
+    const message = reason.message || String(reason) || 'Async Promise rejected without error handler.';
+
+    console.error('[CivicTrack Unhandled Rejection]', {
+      message,
+      reason
+    });
+
+    if (typeof document !== 'undefined' && typeof NotificationService !== 'undefined' && NotificationService.showToast) {
+      NotificationService.showToast({
+        title: 'Operation Notice',
+        message: message.length < 80 ? message : 'An asynchronous task could not be completed. Please try again.',
+        type: 'danger'
+      });
+    }
+  }
+};
+
 const ThemeManager = {
   init() {
     const settings = StorageService.getSettings();
@@ -178,7 +236,10 @@ const ThemeManager = {
 /**
  * Global App Initialization on DOM Ready
  */
-document.addEventListener('DOMContentLoaded', () => {
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+  // Initialize centralized error boundary first
+  ErrorHandler.init();
   // Initialize storage
   StorageService.init();
 
@@ -218,5 +279,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   console.log('CivicTrack AI initialized successfully in Hackathon Prototype Mode.');
-});
-
+  });
+}
+// Universal export for Node.js unit tests
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { AppRouter, ProfileController, ThemeManager, ErrorHandler };
+}
